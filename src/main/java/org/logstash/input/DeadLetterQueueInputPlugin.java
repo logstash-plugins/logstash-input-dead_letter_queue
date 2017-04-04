@@ -87,7 +87,7 @@ public class DeadLetterQueueInputPlugin {
     }
 
     private void writeOffsets(Path segment, long offset) throws IOException {
-        logger.warn("writing offsets");
+        logger.info("writing offsets");
         String path = segment.toAbsolutePath().toString();
         ByteBuffer buffer = ByteBuffer.allocate(path.length() + 1 + 64);
         buffer.putChar(VERSION);
@@ -98,7 +98,7 @@ public class DeadLetterQueueInputPlugin {
     }
 
     public void close() throws IOException {
-        logger.warn("closing dlq input plugin");
+        logger.warn("closing dead letter queue input plugin");
         if (commitOffsets) {
             writeOffsets(manager.getCurrentSegment(), manager.getCurrentPosition());
         }

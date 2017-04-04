@@ -1,9 +1,9 @@
 require 'logstash/namespace'
 require 'logstash/inputs/base'
-require 'logstash-input-dlq.jar'
+require 'logstash-input-dead_letter_queue.jar'
 
-
-class LogStash::Inputs::Dlq < LogStash::Inputs::Base
+# Logstash input to read events from a dead letter queue
+class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
   config_name 'dead_letter_queue'
 
   default :codec, 'plain'
