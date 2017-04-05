@@ -2,14 +2,26 @@ require 'logstash/namespace'
 require 'logstash/inputs/base'
 require 'logstash-input-dead_letter_queue.jar'
 
-# Logstash input to read events from a dead letter queue
+# Logstash input to read events from Logstash's dead letter queue
+# 
+# [source, sh]
+# -----------------------------------------
+# input {
+#   dead_letter_queue {
+#     path => "/var/logstash/data/dead_letter_queue"
+#     timestamp => "2017-04-04T23:40:37"
+#   }
+# }
+# -----------------------------------------
+# 
 class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
   config_name 'dead_letter_queue'
 
   default :codec, 'plain'
 
   # Path to the dead letter queue directory which was created by a Logstash instance.
-  # This is the path from where "dead" events are read from.
+  # This is the path from where "dead" events are read from and is typically configured 
+  # in the original Logstash instance with the setting path.dead_letter_queue.
   config :path, :validate => :path, :required => true
   # ID of the pipeline whose events you want to read from.
   config :pipeline_id, :validate => :string, :default => "main"
@@ -21,7 +33,8 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
   # used when you want to iterate multiple times over the events in the dead letter queue, but don't want to 
   # save state. This is when you are exploring the events in the dead letter queue. 
   config :commit_offsets, :validate => :boolean, :default => true
-  # Timestamp from when you want to start processing the events from.
+  # Timestamp in ISO8601 format from when you want to start processing the events from. 
+  # For example, 2017-04-04T23:40:37
   config :start_timestamp, :validate => :string, :required => false
 
   public
