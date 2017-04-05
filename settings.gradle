@@ -1,4 +1,4 @@
-rootProject.name = 'logstash-input-dlq'
+rootProject.name = 'logstash-input-dead_letter_queue'
 
 // find sibling logstash directory
 def lsDir = null

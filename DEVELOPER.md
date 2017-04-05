@@ -1,4 +1,4 @@
-logstash-input-dlq
+logstash-input-dead_letter_queue
 ====================
 
 Logstash Dead Letter Queue Input Plugin, This plugin enables reading from Logstash's dead-letter-queue.
@@ -7,7 +7,7 @@ Logstash Configuration
 ====================
 
     input {
-        dlq {
+        dead_letter_queue {
             path => ... # string (required) Path to dead letter queue directory containing segment files
         }
     }

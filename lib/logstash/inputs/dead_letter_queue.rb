@@ -19,7 +19,8 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
       datapath = File.join(LogStash::SETTINGS.get_value("path.data"), "plugins", "inputs", "dead_letter_queue")
       # Ensure that the filepath exists before writing, since it's deeply nested.
       FileUtils::mkdir_p datapath
-      @sincedb_path = File.join(datapath, ".sincedb_" + Digest::MD5.hexdigest(@path.join(",")))
+      @sincedb_path = File.join(datapath, ".sincedb_" + Digest::MD5.hexdigest(@path))
+      puts @sincedb_path
     elsif File.directory?(@sincedb_path)
         raise ArgumentError.new("The \"sincedb_path\" argument must point to a file, received a directory: \"#{@sincedb_path}\"")
     end
