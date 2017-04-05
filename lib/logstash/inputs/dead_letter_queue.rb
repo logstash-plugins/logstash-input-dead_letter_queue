@@ -8,27 +8,37 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
 
   default :codec, 'plain'
 
+  # Path to the dead letter queue directory which was created by a Logstash instance.
+  # This is the path from where "dead" events are read from.
   config :path, :validate => :path, :required => true
+  # ID of the pipeline whose events you want to read from.
+  config :pipeline_id, :validate => :string, :default => "main"
+  # Path of the sincedb database file (keeps track of the current position of dead letter queue) that 
+  # will be written to disk. The default will write sincedb files to `<path.data>/plugins/inputs/dead_letter_queue`
+  # NOTE: it must be a file path and not a directory path
   config :sincedb_path, :validate => :string, :required => false
+  # Should this input commit offsets as it processes the events. `false` value is typically 
+  # used when you want to iterate multiple times over the events in the dead letter queue, but don't want to 
+  # save state. This is when you are exploring the events in the dead letter queue. 
   config :commit_offsets, :validate => :boolean, :default => true
+  # Timestamp from when you want to start processing the events from.
   config :start_timestamp, :validate => :string, :required => false
 
   public
   def register
     if @sincedb_path.nil?
-      datapath = File.join(LogStash::SETTINGS.get_value("path.data"), "plugins", "inputs", "dead_letter_queue")
+      datapath = File.join(LogStash::SETTINGS.get_value("path.data"), "plugins", "inputs", "dead_letter_queue", @pipeline_id)
       # Ensure that the filepath exists before writing, since it's deeply nested.
       FileUtils::mkdir_p datapath
       @sincedb_path = File.join(datapath, ".sincedb_" + Digest::MD5.hexdigest(@path))
-      puts @sincedb_path
     elsif File.directory?(@sincedb_path)
         raise ArgumentError.new("The \"sincedb_path\" argument must point to a file, received a directory: \"#{@sincedb_path}\"")
     end
 
-    path = java.nio.file.Paths.get(@path)
+    dlq_path = java.nio.file.Paths.get(File.join(@path, @pipeline_id))
     sincedb_path = @sincedb_path ? java.nio.file.Paths.get(@sincedb_path) : nil
     start_timestamp = @start_timestamp ? org.logstash.Timestamp.new(@start_timestamp) : nil
-    @inner_plugin = org.logstash.input.DeadLetterQueueInputPlugin.new(path, @commit_offsets, sincedb_path, start_timestamp)
+    @inner_plugin = org.logstash.input.DeadLetterQueueInputPlugin.new(dlq_path, @commit_offsets, sincedb_path, start_timestamp)
     @inner_plugin.register
   end # def register
 
