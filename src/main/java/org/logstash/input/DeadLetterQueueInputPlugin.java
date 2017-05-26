@@ -23,7 +23,7 @@ import org.apache.logging.log4j.Logger;
 import org.logstash.DLQEntry;
 import org.logstash.Timestamp;
 import org.logstash.ackedqueue.Queueable;
-import org.logstash.common.io.DeadLetterQueueReadManager;
+import org.logstash.common.io.DeadLetterQueueReader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -38,21 +38,21 @@ public class DeadLetterQueueInputPlugin {
     private static final Logger logger = LogManager.getLogger(DeadLetterQueueInputPlugin.class);
 
     private final static char VERSION = '1';
-    private final DeadLetterQueueReadManager manager;
+    private final DeadLetterQueueReader manager;
     private final boolean commitOffsets;
     private final Path sinceDbPath;
     private final AtomicBoolean open;
     private final Timestamp targetTimestamp;
 
     public DeadLetterQueueInputPlugin(Path path, boolean commitOffsets, Path sinceDbPath, Timestamp targetTimestamp) throws Exception {
-        this.manager = new DeadLetterQueueReadManager(path);
+        this.manager = new DeadLetterQueueReader(path);
         this.commitOffsets = commitOffsets;
         this.open = new AtomicBoolean(true);
         this.sinceDbPath = sinceDbPath;
         this.targetTimestamp = targetTimestamp;
     }
 
-    public DeadLetterQueueReadManager getManager() {
+    public DeadLetterQueueReader getManager() {
         return manager;
     }
 
