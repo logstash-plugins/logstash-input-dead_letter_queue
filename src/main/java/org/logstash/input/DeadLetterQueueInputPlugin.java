@@ -38,22 +38,22 @@ public class DeadLetterQueueInputPlugin {
     private static final Logger logger = LogManager.getLogger(DeadLetterQueueInputPlugin.class);
 
     private final static char VERSION = '1';
-    private final DeadLetterQueueReader manager;
+    private final DeadLetterQueueReader queueReader;
     private final boolean commitOffsets;
     private final Path sinceDbPath;
     private final AtomicBoolean open;
     private final Timestamp targetTimestamp;
 
     public DeadLetterQueueInputPlugin(Path path, boolean commitOffsets, Path sinceDbPath, Timestamp targetTimestamp) throws Exception {
-        this.manager = new DeadLetterQueueReader(path);
+        this.queueReader = new DeadLetterQueueReader(path);
         this.commitOffsets = commitOffsets;
         this.open = new AtomicBoolean(true);
         this.sinceDbPath = sinceDbPath;
         this.targetTimestamp = targetTimestamp;
     }
 
-    public DeadLetterQueueReader getManager() {
-        return manager;
+    public DeadLetterQueueReader getQueueReader() {
+        return queueReader;
     }
 
     public void register() throws IOException {
@@ -71,15 +71,15 @@ public class DeadLetterQueueInputPlugin {
             byte[] segmentPathBytes = new byte[segmentPathStringLength];
             buffer.get(segmentPathBytes);
             long offset = buffer.getLong();
-            manager.setCurrentReaderAndPosition(Paths.get(new String(segmentPathBytes)), offset);
+            queueReader.setCurrentReaderAndPosition(Paths.get(new String(segmentPathBytes)), offset);
         } else if (targetTimestamp != null) {
-            manager.seekToNextEvent(targetTimestamp);
+            queueReader.seekToNextEvent(targetTimestamp);
         }
     }
 
     public void run(Consumer<Queueable> queueConsumer) throws Exception {
         while (open.get()) {
-            DLQEntry entry = manager.pollEntry(100);
+            DLQEntry entry = queueReader.pollEntry(100);
             if (entry != null) {
                 queueConsumer.accept(entry);
             }
@@ -100,9 +100,9 @@ public class DeadLetterQueueInputPlugin {
     public void close() throws IOException {
         logger.warn("closing dead letter queue input plugin");
         if (commitOffsets) {
-            writeOffsets(manager.getCurrentSegment(), manager.getCurrentPosition());
+            writeOffsets(queueReader.getCurrentSegment(), queueReader.getCurrentPosition());
         }
-        manager.close();
+        queueReader.close();
         open.set(false);
     }
 }
