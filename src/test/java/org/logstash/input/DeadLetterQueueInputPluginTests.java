@@ -26,8 +26,7 @@ import org.junit.rules.TemporaryFolder;
 import org.logstash.DLQEntry;
 import org.logstash.Event;
 import org.logstash.Timestamp;
-import org.logstash.common.io.DeadLetterQueueReadManager;
-import org.logstash.common.io.DeadLetterQueueWriteManager;
+import org.logstash.common.io.DeadLetterQueueWriter;
 
 import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -48,10 +47,10 @@ public class DeadLetterQueueInputPluginTests {
 
     @Test
     public void test() throws Exception {
-        DeadLetterQueueWriteManager manager = new DeadLetterQueueWriteManager(dir, 100000000, 10000000);
+        DeadLetterQueueWriter queueWriter = new DeadLetterQueueWriter(dir, 100000000, 10000000);
         DLQEntry entry = new DLQEntry(new Event(), "test", "test", "test");
         for (int i = 0; i < 10000; i++) {
-            manager.writeEntry(entry);
+            queueWriter.writeEntry(entry);
         }
 
         Path since = temporaryFolder.newFile(".sincdb").toPath();
@@ -69,15 +68,15 @@ public class DeadLetterQueueInputPluginTests {
         pluginThread.start();
         Thread.sleep(800);
         assertEquals(10000, count.get());
-        manager.writeEntry(entry);
+        queueWriter.writeEntry(entry);
         Thread.sleep(200);
         assertEquals(10001, count.get());
         pluginThread.interrupt();
         pluginThread.join();
         plugin.close();
 
-        manager.writeEntry(entry);
-        manager.writeEntry(entry);
+        queueWriter.writeEntry(entry);
+        queueWriter.writeEntry(entry);
 
         DeadLetterQueueInputPlugin secondPlugin = new DeadLetterQueueInputPlugin(dir, true, since, null);
 
@@ -99,12 +98,12 @@ public class DeadLetterQueueInputPluginTests {
 
     @Test
     public void testTimestamp() throws Exception {
-        DeadLetterQueueWriteManager manager = new DeadLetterQueueWriteManager(dir, 100000, 10000000);
+        DeadLetterQueueWriter queueWriter = new DeadLetterQueueWriter(dir, 100000, 10000000);
         long epoch = 1490659200000L;
         String targetDateString = "";
         for (int i = 0; i < 10000; i++) {
             DLQEntry entry = new DLQEntry(new Event(), "test", "test", "test", new Timestamp(epoch));
-            manager.writeEntry(entry);
+            queueWriter.writeEntry(entry);
             epoch += 1000;
             if (i == 800) {
                 targetDateString = entry.getEntryTime().toIso8601();
