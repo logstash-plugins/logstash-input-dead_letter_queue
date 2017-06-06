@@ -1,3 +1,6 @@
+## 1.0.3
+ - Docs: Fixed error in example plus made a few edits
+ 
 ## 1.0.2
  - internal: renamed DeadLetterQueueWriteManager to DeadLetterQueueWriter in tests
  

@@ -20,14 +20,14 @@ include::{include_path}/plugin_header.asciidoc[]
 
 ==== Description
 
-Logstash input to read events from Logstash's dead letter queue
+Logstash input to read events from Logstash's dead letter queue.
 
 [source, sh]
 -----------------------------------------
 input {
   dead_letter_queue {
     path => "/var/logstash/data/dead_letter_queue"
-    timestamp => "2017-04-04T23:40:37"
+    start_timestamp => "2017-04-04T23:40:37"
   }
 }
 -----------------------------------------
@@ -59,9 +59,10 @@ input plugins.
   * Value type is <<boolean,boolean>>
   * Default value is `true`
 
-Should this input commit offsets as it processes the events. `false` value is typically 
-used when you want to iterate multiple times over the events in the dead letter queue, but don't want to 
-save state. This is when you are exploring the events in the dead letter queue. 
+Specifies whether this input should commit offsets as it processes the events.
+Typically you specify `false` when you want to iterate multiple times over the
+events in the dead letter queue, but don't want to save state. This is when you
+are exploring the events in the dead letter queue. 
 
 [id="plugins-{type}s-{plugin}-path"]
 ===== `path` 
@@ -70,9 +71,9 @@ save state. This is when you are exploring the events in the dead letter queue.
   * Value type is <<path,path>>
   * There is no default value for this setting.
 
-Path to the dead letter queue directory which was created by a Logstash instance.
-This is the path from where "dead" events are read from and is typically configured 
-in the original Logstash instance with the setting path.dead_letter_queue.
+Path to the dead letter queue directory that was created by a Logstash instance.
+This is the path from which "dead" events are read and is typically configured 
+in the original Logstash instance with the setting `path.dead_letter_queue`.
 
 [id="plugins-{type}s-{plugin}-pipeline_id"]
 ===== `pipeline_id` 
@@ -89,8 +90,9 @@ ID of the pipeline whose events you want to read from.
   * There is no default value for this setting.
 
 Path of the sincedb database file (keeps track of the current position of dead letter queue) that 
-will be written to disk. The default will write sincedb files to `<path.data>/plugins/inputs/dead_letter_queue`
-NOTE: it must be a file path and not a directory path
+will be written to disk. The default will write sincedb files to `<path.data>/plugins/inputs/dead_letter_queue`.
+
+NOTE: This value must be a file path and not a directory path.
 
 [id="plugins-{type}s-{plugin}-start_timestamp"]
 ===== `start_timestamp` 
@@ -99,7 +101,7 @@ NOTE: it must be a file path and not a directory path
   * There is no default value for this setting.
 
 Timestamp in ISO8601 format from when you want to start processing the events from. 
-For example, 2017-04-04T23:40:37
+For example, `2017-04-04T23:40:37`.
 
 
 
