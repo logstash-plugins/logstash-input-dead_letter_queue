@@ -18,7 +18,7 @@
  */
 package org.logstash.input;
 
-import org.joda.time.DateTime;
+import java.io.IOException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -26,10 +26,11 @@ import org.junit.rules.TemporaryFolder;
 import org.logstash.DLQEntry;
 import org.logstash.Event;
 import org.logstash.Timestamp;
+
 import org.logstash.common.io.DeadLetterQueueWriter;
 
 import java.nio.file.Path;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 
 import static junit.framework.TestCase.assertEquals;
 
@@ -46,70 +47,151 @@ public class DeadLetterQueueInputPluginTests {
     }
 
     @Test
-    public void test() throws Exception {
-        DeadLetterQueueWriter queueWriter = new DeadLetterQueueWriter(dir, 100000000, 10000000);
-        DLQEntry entry = new DLQEntry(new Event(), "test", "test", "test");
-        for (int i = 0; i < 10000; i++) {
-            queueWriter.writeEntry(entry);
+    public void testConsumeTwiceNoOffsetsWithDate() throws Exception {
+        DeadLetterQueueWriter queueWriter = null;
+        try {
+            queueWriter = new DeadLetterQueueWriter(dir, 100000000, 10000000);
+            Timestamp cutoffTimestamp = writeEventsWithCutoff(queueWriter, 1000, 800);
+
+            try(DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, false, null, cutoffTimestamp)) {
+                assertMessagesReceived(plugin, 200);
+            }
+            writeEvents(queueWriter, 5);
+            try(DeadLetterQueueInputPlugin secondPlugin = new DeadLetterQueueInputPlugin(dir, false, null, cutoffTimestamp)) {
+                assertMessagesReceived(secondPlugin, 205);
+            }
+        } finally {
+            queueWriter.close();
         }
-
-        Path since = temporaryFolder.newFile(".sincdb").toPath();
-        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, true, since, null);
-
-        final AtomicInteger count = new AtomicInteger();
-        Thread pluginThread = new Thread(() -> {
-            try {
-                plugin.register();
-                plugin.run((e) -> {count.incrementAndGet();});
-            } catch (Exception e) {
-                // do nothing
-            }
-        });
-        pluginThread.start();
-        Thread.sleep(15000);
-        assertEquals(10000, count.get());
-        queueWriter.writeEntry(entry);
-        Thread.sleep(200);
-        assertEquals(10001, count.get());
-        pluginThread.interrupt();
-        pluginThread.join();
-        plugin.close();
-
-        queueWriter.writeEntry(entry);
-        queueWriter.writeEntry(entry);
-
-        DeadLetterQueueInputPlugin secondPlugin = new DeadLetterQueueInputPlugin(dir, true, since, null);
-
-        pluginThread = new Thread(() -> {
-            try {
-                secondPlugin.register();
-                secondPlugin.run((e) -> {count.incrementAndGet();});
-            } catch (Exception e) {
-                // do nothing
-            }
-        });
-        pluginThread.start();
-        Thread.sleep(200);
-        pluginThread.interrupt();
-        pluginThread.join();
-        secondPlugin.close();
-        assertEquals(10003, count.get());
     }
 
     @Test
-    public void testTimestamp() throws Exception {
-        DeadLetterQueueWriter queueWriter = new DeadLetterQueueWriter(dir, 100000, 10000000);
+    public void testConsumeTwiceOffsetsNoDate() throws Exception {
+        DeadLetterQueueWriter queueWriter = null;
+        try {
+            queueWriter = new DeadLetterQueueWriter(dir, 100000000, 10000000);
+            Path since = getSinceDbPathName();
+            writeEventsWithCutoff(queueWriter, 1000, 800);
+
+            try(DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, true, since, null)) {
+                assertMessagesReceived(plugin, 1000);
+            }
+            writeEvents(queueWriter, 5);
+            try(DeadLetterQueueInputPlugin secondPlugin = new DeadLetterQueueInputPlugin(dir, true, since, null)) {
+                assertMessagesReceived(secondPlugin, 5);
+            }
+        }finally{
+            queueWriter.close();
+        }
+    }
+
+    @Test
+    public void testConsumeTwiceOffsetsWithDate() throws Exception {
+        DeadLetterQueueWriter queueWriter = null;
+        try {
+            queueWriter = new DeadLetterQueueWriter(dir, 100000000, 10000000);
+            Path since = getSinceDbPathName();
+            Timestamp cutoffTimestamp = writeEventsWithCutoff(queueWriter, 1000, 800);
+
+            try(DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, true, since, cutoffTimestamp)){
+                assertMessagesReceived(plugin, 200);
+            }
+
+            writeEvents(queueWriter, 5);
+            try(DeadLetterQueueInputPlugin secondPlugin = new DeadLetterQueueInputPlugin(dir, true, since, cutoffTimestamp)){
+                assertMessagesReceived(secondPlugin, 5);
+            }
+        }finally{
+            queueWriter.close();
+        }
+    }
+
+    @Test
+    public void testConsumeTwiceNoOffsetsNoDate() throws Exception {
+        DeadLetterQueueWriter queueWriter = null;
+        try {
+            queueWriter = new DeadLetterQueueWriter(dir, 100000000, 10000000);
+            writeEventsWithCutoff(queueWriter, 1000, 800);
+
+            try(DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, false, null, null)){
+                assertMessagesReceived(plugin, 1000);
+            }
+
+            writeEvents(queueWriter, 5);
+
+            try(DeadLetterQueueInputPlugin secondPlugin = new DeadLetterQueueInputPlugin(dir, false, null, null)) {
+                assertMessagesReceived(secondPlugin, 1005);
+            }
+        }finally{
+            queueWriter.close();
+        }
+    }
+
+    /**
+     * Assert that the number of messages received by the plugin matches the expected count.
+     * @param plugin
+     * @param expectedCount
+     * @throws InterruptedException
+     * @throws IOException
+     */
+    private static void assertMessagesReceived(DeadLetterQueueInputPlugin plugin, int expectedCount) throws InterruptedException, IOException {
+        LongAdder count = new LongAdder();
+        Thread pluginThread = new Thread(() -> {
+            try {
+                plugin.register();
+                plugin.run((e) -> {count.increment();});
+            } catch (Exception e) {
+                // do nothing
+            }
+        });
+        pluginThread.start();
+        Thread.sleep(2000);
+        pluginThread.interrupt();
+        pluginThread.join(1000);
+        assertEquals(expectedCount, count.intValue());
+    }
+
+    /**
+     * Write events to the queue, adding a boundary
+     * @param queueWriter instance of {@link DeadLetterQueueWriter} to write entry to queue
+     * @param eventsToWrite How many events to write in total
+     * @param cutOffPoint After how many events should the 'cutoff' timestamp be written
+     * @return CutOff {@link Timestamp}
+     * @throws IOException
+     */
+    private static Timestamp writeEventsWithCutoff(DeadLetterQueueWriter queueWriter, int eventsToWrite, int cutOffPoint) throws IOException {
         long epoch = 1490659200000L;
-        String targetDateString = "";
-        for (int i = 0; i < 10000; i++) {
+        Timestamp cutoffTimestamp = null;
+        for (int i = 0; i < eventsToWrite; i++) {
             DLQEntry entry = new DLQEntry(new Event(), "test", "test", "test", new Timestamp(epoch));
             queueWriter.writeEntry(entry);
             epoch += 1000;
-            if (i == 800) {
-                targetDateString = entry.getEntryTime().toIso8601();
+            if (i == cutOffPoint) {
+                cutoffTimestamp = entry.getEntryTime();
             }
         }
-        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, false, null, new Timestamp(targetDateString));
-        plugin.register();
+        return cutoffTimestamp;
     }
+
+    /**
+     * Write events to the queue
+     * @param queueWriter instance of {@link DeadLetterQueueWriter} to write entry to queue
+     * @param eventsToWrite How many events to write in total
+     * @throws IOException
+     */
+    private static void writeEvents(DeadLetterQueueWriter queueWriter, int eventsToWrite) throws IOException {
+        for (int i = 0; i < eventsToWrite; i++) {
+            DLQEntry entry = new DLQEntry(new Event(), "test", "test", "test");
+            queueWriter.writeEntry(entry);
+        }
+    }
+
+    /**
+     * Return the path of the since db, but do not create
+     * @return {@link Path} Location of the since db.
+     */
+    private Path getSinceDbPathName() {
+        return temporaryFolder.getRoot().toPath().resolve(".sincdb");
+    }
+
 }
