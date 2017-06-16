@@ -14,7 +14,7 @@ END - GENERATED VARIABLES, DO NOT EDIT!
 
 [id="plugins-{type}-{plugin}"]
 
-=== Dead_letter_queue
+=== Dead_letter_queue input plugin
 
 include::{include_path}/plugin_header.asciidoc[]
 
