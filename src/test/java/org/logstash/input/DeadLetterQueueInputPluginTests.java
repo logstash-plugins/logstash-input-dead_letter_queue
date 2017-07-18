@@ -66,7 +66,7 @@ public class DeadLetterQueueInputPluginTests {
             }
         });
         pluginThread.start();
-        Thread.sleep(2000);
+        Thread.sleep(15000);
         assertEquals(10000, count.get());
         queueWriter.writeEntry(entry);
         Thread.sleep(200);
