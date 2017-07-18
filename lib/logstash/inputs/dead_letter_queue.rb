@@ -1,6 +1,6 @@
 require 'logstash/namespace'
 require 'logstash/inputs/base'
-require 'logstash-input-dead_letter_queue.jar'
+require 'logstash-input-dead_letter_queue_jars'
 
 # Logstash input to read events from Logstash's dead letter queue
 # 
