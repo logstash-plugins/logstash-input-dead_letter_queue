@@ -1,15 +1,1 @@
 rootProject.name = 'logstash-input-dead_letter_queue'
-
-// find sibling logstash directory
-def lsDir = null
-new File('..').eachDir() { dir ->
-    String what = "git --git-dir ${dir.getPath()}/.git remote -v".execute().text
-    what.eachLine {
-        if (it =~ /elastic.*\/logstash.git/) {
-            lsDir = dir
-        }
-    }
-}
-
-include 'logstash-core'
-project(':logstash-core').projectDir = lsDir.toPath().resolve("logstash-core").toFile()
