@@ -1,3 +1,6 @@
+## 1.0.6
+  - Fix some documentation issues
+
 ## 1.0.5
  - Internal: Fixed Continuous Integration errors
 
