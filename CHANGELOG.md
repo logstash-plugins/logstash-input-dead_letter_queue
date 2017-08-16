@@ -1,3 +1,6 @@
+## 1.1.0
+ - Added support for 'add-field' and 'tags' 
+ 
 ## 1.0.6
   - Fix some documentation issues
 

@@ -63,6 +63,7 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
       event.set("[@metadata][dead_letter_queue][plugin_id]", entry.plugin_id)
       event.set("[@metadata][dead_letter_queue][reason]", entry.reason)
       event.set("[@metadata][dead_letter_queue][entry_time]", entry.entry_time)
+      decorate(event)
       logstash_queue << event
     end
   end # def run
