@@ -1,3 +1,6 @@
+## 1.1.1
+ - Docs: Add link to conceptual docs about the dead letter queue
+ 
 ## 1.1.0
  - Added support for 'add-field' and 'tags' 
  
