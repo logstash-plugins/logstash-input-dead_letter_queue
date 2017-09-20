@@ -25,6 +25,7 @@ import org.logstash.Timestamp;
 import org.logstash.ackedqueue.Queueable;
 import org.logstash.common.io.DeadLetterQueueReader;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
@@ -34,7 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 
-public class DeadLetterQueueInputPlugin {
+public class DeadLetterQueueInputPlugin implements Closeable {
     private static final Logger logger = LogManager.getLogger(DeadLetterQueueInputPlugin.class);
 
     private final static char VERSION = '1';
@@ -57,9 +58,13 @@ public class DeadLetterQueueInputPlugin {
     }
 
     public void register() throws IOException {
-        if (sinceDbPath != null && Files.exists(sinceDbPath) && targetTimestamp == null) {
+        if (sinceDbPath != null && Files.exists(sinceDbPath)) {
             byte[] bytes = Files.readAllBytes(sinceDbPath);
+
             if (bytes.length == 0) {
+                if (targetTimestamp != null) {
+                    queueReader.seekToNextEvent(targetTimestamp);
+                }
                 return;
             }
             ByteBuffer buffer = ByteBuffer.wrap(bytes);
@@ -87,7 +92,6 @@ public class DeadLetterQueueInputPlugin {
     }
 
     private void writeOffsets(Path segment, long offset) throws IOException {
-        logger.info("writing offsets");
         String path = segment.toAbsolutePath().toString();
         ByteBuffer buffer = ByteBuffer.allocate(path.length() + 1 + 64);
         buffer.putChar(VERSION);
@@ -97,12 +101,14 @@ public class DeadLetterQueueInputPlugin {
         Files.write(sinceDbPath, buffer.array());
     }
 
+    @Override
     public void close() throws IOException {
-        logger.warn("closing dead letter queue input plugin");
-        if (commitOffsets) {
-            writeOffsets(queueReader.getCurrentSegment(), queueReader.getCurrentPosition());
+        if (open.get()) {
+            if (commitOffsets) {
+                writeOffsets(queueReader.getCurrentSegment(), queueReader.getCurrentPosition());
+            }
+            queueReader.close();
+            open.set(false);
         }
-        queueReader.close();
-        open.set(false);
     }
 }
