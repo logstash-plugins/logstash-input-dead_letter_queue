@@ -106,7 +106,7 @@ public class DeadLetterQueueInputPluginTests {
             queueWriter.writeEntry(entry);
             epoch += 1000;
             if (i == 800) {
-                targetDateString = entry.getEntryTime().toIso8601();
+                targetDateString = entry.getEntryTime().toString();
             }
         }
         DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, false, null, new Timestamp(targetDateString));
