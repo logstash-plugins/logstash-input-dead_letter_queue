@@ -1,8 +1,8 @@
 Gem::Specification.new do |s|
   s.name            = 'logstash-input-dead_letter_queue'
-  s.version         = '1.1.1'
+  s.version         = '1.1.2'
   s.licenses        = ['Apache License (2.0)']
-  s.summary         = 'Logstash input to read dead lettered events'
+  s.summary         = "read events from Logstash's dead letter queue"
   s.description     = "This gem is a Logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program"
   s.authors         = ['Elastic']
   s.email           = 'info@elastic.co'

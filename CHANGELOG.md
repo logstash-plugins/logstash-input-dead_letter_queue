@@ -1,3 +1,6 @@
+## 1.1.2
+  - Update gemspec summary
+
 ## 1.1.1
  - Docs: Add link to conceptual docs about the dead letter queue
  
