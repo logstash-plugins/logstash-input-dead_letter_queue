@@ -93,7 +93,7 @@ ID of the pipeline whose events you want to read from.
   * There is no default value for this setting.
 
 Path of the sincedb database file (keeps track of the current position of dead letter queue) that 
-will be written to disk. The default will write sincedb files to `<path.data>/plugins/inputs/dead_letter_queue`.
+will be written to disk. The default will write sincedb files to `<path.data>/plugins/inputs/dead_letter_queue/`.
 
 NOTE: This value must be a file path and not a directory path.
 
