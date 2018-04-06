@@ -1,3 +1,6 @@
+## 1.1.4
+  - Fix broken 1.1.3 release
+
 ## 1.1.3
   - Docs: Set the default_codec doc attribute.
 
