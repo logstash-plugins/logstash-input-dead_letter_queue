@@ -1,3 +1,6 @@
+## 1.1.5
+  - Fix asciidoc formatting in documentation [#21](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/21)
+
 ## 1.1.4
   - Fix broken 1.1.3 release
 
