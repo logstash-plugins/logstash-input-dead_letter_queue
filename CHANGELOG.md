@@ -1,3 +1,6 @@
+## 1.1.5
+  - Fix ascidoc formatting in documentation
+
 ## 1.1.4
   - Fix broken 1.1.3 release
 
