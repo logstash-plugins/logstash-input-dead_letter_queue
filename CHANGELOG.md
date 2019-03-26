@@ -1,5 +1,5 @@
 ## 1.1.5
-  - Fix ascidoc formatting in documentation
+  - Fix ascidoc formatting in documentation [#21](https://github.com/logstash-plugins/logstash-input-cloudwatch/pull/21)
 
 ## 1.1.4
   - Fix broken 1.1.3 release
