@@ -105,7 +105,12 @@ NOTE: This value must be a file path and not a directory path.
   * There is no default value for this setting.
 
 Timestamp in ISO8601 format from when you want to start processing the events from. 
-For example, `2017-04-04T23:40:37`.
+For example, `2017-04-04T23:40:37.000Z`.
+
+Note:  The `start_timestamp` directive is not a filter on any attribute of the `Event` 
+(such as `@timestamp` or a custom timestamp field); it simply instructs the DLQ input to skip over 
+items that were written to the DLQ earlier than the given time.  The "written" (or DLQ entry time) 
+can be retrieved via the metadata field `%{[@metadata][dead_letter_queue][entry_time]}`.
 
 
 
