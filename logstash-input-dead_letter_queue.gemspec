@@ -1,6 +1,8 @@
+dlq_version = File.read(File.expand_path(File.join(File.dirname(__FILE__), "VERSION"))).strip
+
 Gem::Specification.new do |s|
   s.name            = 'logstash-input-dead_letter_queue'
-  s.version         = '1.1.5'
+  s.version         = dlq_version
   s.licenses        = ['Apache License (2.0)']
   s.summary         = "read events from Logstash's dead letter queue"
   s.description     = "This gem is a Logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program"
