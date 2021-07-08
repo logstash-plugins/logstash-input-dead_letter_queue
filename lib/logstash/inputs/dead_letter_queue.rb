@@ -58,7 +58,9 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
   public
   def run(logstash_queue)
     @inner_plugin.run do |entry|
-      event = LogStash::Event.new(entry.event.toMap())
+      event = LogStash::Event.new()
+      # The original event is converted to a string to avoid mapping problems 
+      event.set("[source_message]", entry.event.toMap().to_s)
       event.set("[@metadata][dead_letter_queue][plugin_type]", entry.plugin_type)
       event.set("[@metadata][dead_letter_queue][plugin_id]", entry.plugin_id)
       event.set("[@metadata][dead_letter_queue][reason]", entry.reason)
