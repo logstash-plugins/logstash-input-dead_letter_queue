@@ -70,12 +70,12 @@ idea {
 }
 
 dependencies {
-  compileOnly group: "org.apache.logging.log4j", name: "log4j-api", version: "2.6.2"
-  compileOnly group: "org.apache.logging.log4j", name: "log4j-core", version: "2.6.2"
+  compileOnly group: "org.apache.logging.log4j", name: "log4j-api", version: "2.15.0"
+  compileOnly group: "org.apache.logging.log4j", name: "log4j-core", version: "2.15.0"
   // Keep Joda version same as JRuby 1.7.25 and 9.1.9.0
   compileOnly group: "joda-time", name: "joda-time", version: "2.8.2"
-  compileOnly 'com.fasterxml.jackson.core:jackson-core:2.7.4'
-  compileOnly 'com.fasterxml.jackson.core:jackson-databind:2.7.4'
+  compileOnly 'com.fasterxml.jackson.core:jackson-core:2.9.10'
+  compileOnly 'com.fasterxml.jackson.core:jackson-databind:2.9.10.8'
   compileOnly 'com.fasterxml.jackson.module:jackson-module-afterburner:2.7.4'
   compileOnly 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.7.4'
   compileOnly group: 'org.jruby', name: 'jruby-complete', version: '9.2.11.0'
