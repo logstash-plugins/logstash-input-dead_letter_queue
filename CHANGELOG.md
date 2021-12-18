@@ -1,5 +1,5 @@
 ## 1.1.7
-  - Further update dependencies for log4j (2.16.0) and jackson
+  - Further update dependencies for log4j (2.17.0) and jackson
 
 ## 1.1.6
   - Update dependencies for log4j and jackson [#30](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/30)
