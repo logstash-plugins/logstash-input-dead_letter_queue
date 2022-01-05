@@ -18,7 +18,7 @@ repositories {
 project.sourceCompatibility = 1.8
 project.targetCompatibility = 1.8
 
-String log4jVersion = '2.17.0'
+String log4jVersion = '2.17.1'
 String jacksonVersion = '2.9.10'
 String jacksonDatabindVersion = '2.9.10.8'
 
