@@ -1,3 +1,6 @@
+## 1.1.8
+  - Update dependencies for log4j to 2.17.1
+
 ## 1.1.7
   - Further update dependencies for log4j (2.17.0) and jackson
 
