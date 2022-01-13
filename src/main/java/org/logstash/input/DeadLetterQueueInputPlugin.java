@@ -41,7 +41,7 @@ public class DeadLetterQueueInputPlugin {
     private final DeadLetterQueueReader queueReader;
     private final boolean commitOffsets;
     private final Path sinceDbPath;
-    private final AtomicBoolean open;
+    private final AtomicBoolean open, readerHasState;
     private final Timestamp targetTimestamp;
 
     public DeadLetterQueueInputPlugin(Path path, boolean commitOffsets, Path sinceDbPath, Timestamp targetTimestamp) throws Exception {
@@ -50,6 +50,7 @@ public class DeadLetterQueueInputPlugin {
         this.open = new AtomicBoolean(true);
         this.sinceDbPath = sinceDbPath;
         this.targetTimestamp = targetTimestamp;
+        this.readerHasState = new AtomicBoolean(false);
     }
 
     public DeadLetterQueueReader getQueueReader() {
@@ -72,8 +73,10 @@ public class DeadLetterQueueInputPlugin {
             buffer.get(segmentPathBytes);
             long offset = buffer.getLong();
             queueReader.setCurrentReaderAndPosition(Paths.get(new String(segmentPathBytes)), offset);
+            readerHasState.set(true);
         } else if (targetTimestamp != null) {
             queueReader.seekToNextEvent(targetTimestamp);
+            readerHasState.set(false);
         }
     }
 
@@ -81,6 +84,7 @@ public class DeadLetterQueueInputPlugin {
         while (open.get()) {
             DLQEntry entry = queueReader.pollEntry(100);
             if (entry != null) {
+                readerHasState.set(true);
                 queueConsumer.accept(entry);
             }
         }
@@ -99,7 +103,7 @@ public class DeadLetterQueueInputPlugin {
 
     public void close() throws IOException {
         logger.warn("closing dead letter queue input plugin");
-        if (commitOffsets) {
+        if (commitOffsets && readerHasState.get()) {
             writeOffsets(queueReader.getCurrentSegment(), queueReader.getCurrentPosition());
         }
         queueReader.close();

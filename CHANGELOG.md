@@ -1,3 +1,5 @@
+## 1.1.10
+  - Fix, avoid Logstash crash on shutdown if DLQ files weren't created [#33](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/33)
 ## 1.1.9
   - Fix `@metadata` get overwritten by reestablishing metadata that stored in DLQ [#34](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/34)
 
