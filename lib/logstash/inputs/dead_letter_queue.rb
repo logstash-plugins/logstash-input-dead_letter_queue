@@ -59,8 +59,14 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
   def run(logstash_queue)
     @inner_plugin.run do |entry|
       clone = entry.event.clone()
-      event = LogStash::Event.new(clone.getData()) # LS 6 LogStash::Event.new accept Map not Event
-      event.set("[@metadata]", clone.getMetadata())
+      event = if Gem::Requirement.new('< 7.0').satisfied_by?(Gem::Version.new(LOGSTASH_CORE_VERSION))
+                # LS 6 LogStash::Event.new accept Map not Event
+                event = LogStash::Event.new(clone.getData())
+                event.set("[@metadata]", clone.getMetadata())
+                event
+              else
+                LogStash::Event.new(clone)
+              end
       event.set("[@metadata][dead_letter_queue][plugin_type]", entry.plugin_type)
       event.set("[@metadata][dead_letter_queue][plugin_id]", entry.plugin_id)
       event.set("[@metadata][dead_letter_queue][reason]", entry.reason)
