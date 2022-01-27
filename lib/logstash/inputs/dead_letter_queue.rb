@@ -58,7 +58,9 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
   public
   def run(logstash_queue)
     @inner_plugin.run do |entry|
-      event = LogStash::Event.new(entry.event.clone())
+      clone = entry.event.clone()
+      event = LogStash::Event.new(clone.getData()) # LS 6 LogStash::Event.new accept Map not Event
+      event.set("[@metadata]", clone.getMetadata())
       event.set("[@metadata][dead_letter_queue][plugin_type]", entry.plugin_type)
       event.set("[@metadata][dead_letter_queue][plugin_id]", entry.plugin_id)
       event.set("[@metadata][dead_letter_queue][reason]", entry.reason)
