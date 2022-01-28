@@ -1,5 +1,5 @@
 ## 1.1.9
-  - Fix `@metadata` get overwritten [#34](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/34)
+  - Fix `@metadata` get overwritten by reestablishing metadata of event stored in DLQ [#34](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/34)
 
 ## 1.1.8
   - Update dependencies for log4j to 2.17.1
