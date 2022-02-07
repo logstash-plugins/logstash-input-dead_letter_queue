@@ -29,6 +29,7 @@ import org.logstash.Timestamp;
 import org.logstash.common.io.DeadLetterQueueWriter;
 
 import java.nio.file.Path;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static junit.framework.TestCase.assertEquals;
@@ -111,5 +112,15 @@ public class DeadLetterQueueInputPluginTests {
         }
         DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, false, null, new Timestamp(targetDateString));
         plugin.register();
+    }
+
+    @Test
+    public void testClosingEmptyDlq() throws Exception {
+        // Plugin does nothing and does not crash
+        Path since = temporaryFolder.newFile(".sincedb").toPath();
+        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, true, since, null);
+
+        plugin.register();
+        plugin.close();
     }
 }
