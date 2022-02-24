@@ -103,10 +103,10 @@ public class DeadLetterQueueInputPlugin {
 
     public void close() throws IOException {
         open.set(false);
-        logger.debug("closing dead letter queue input plugin");
 
         CurrentSegmentAndPosition state = null;
         if (commitOffsets && readerHasState.get()) {
+            logger.debug("retrieving current DLQ segment and position");
             try {
                 final DeadLetterQueueReader queueReader = getQueueReader();
                 state = new CurrentSegmentAndPosition(queueReader.getCurrentSegment(), queueReader.getCurrentPosition());
@@ -116,6 +116,7 @@ public class DeadLetterQueueInputPlugin {
         }
 
         try {
+            logger.debug("closing DLQ reader");
             final DeadLetterQueueReader queueReader = this.queueReader;
             if (queueReader != null) queueReader.close();
         } catch (Exception e) {
