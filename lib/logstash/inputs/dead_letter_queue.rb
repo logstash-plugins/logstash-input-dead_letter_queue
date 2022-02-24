@@ -2,6 +2,8 @@ require 'logstash/namespace'
 require 'logstash/inputs/base'
 require 'logstash-input-dead_letter_queue_jars'
 
+require 'fileutils'
+
 # Logstash input to read events from Logstash's dead letter queue
 # 
 # [source, sh]
@@ -45,7 +47,7 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
       FileUtils::mkdir_p datapath
       @sincedb_path = File.join(datapath, ".sincedb_" + Digest::MD5.hexdigest(@path))
     elsif File.directory?(@sincedb_path)
-        raise ArgumentError.new("The \"sincedb_path\" argument must point to a file, received a directory: \"#{@sincedb_path}\"")
+      raise ArgumentError.new("The \"sincedb_path\" argument must point to a file, received a directory: \"#{@sincedb_path}\"")
     end
 
     dlq_path = java.nio.file.Paths.get(File.join(@path, @pipeline_id))
