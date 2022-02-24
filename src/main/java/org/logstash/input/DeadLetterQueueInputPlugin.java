@@ -58,7 +58,7 @@ public class DeadLetterQueueInputPlugin {
         this.readerHasState = new AtomicBoolean(false);
     }
 
-    private synchronized DeadLetterQueueReader getQueueReader() throws IOException {
+    private synchronized DeadLetterQueueReader lazyInitQueueReader() throws IOException {
         if (queueReader == null) {
             final File queueDir = queuePath.toFile();
             // NOTE: avoid creating DLQReader if these fail so that on plugin restarts the inotify limit is not decremented
@@ -78,7 +78,7 @@ public class DeadLetterQueueInputPlugin {
 
     public void register() throws IOException {
         if (queuePath.toFile().isDirectory()) {
-            getQueueReader(); // NOTE: reading sincedb 'early' for backwards compatibility, should be fine to remove
+            lazyInitQueueReader(); // NOTE: reading sincedb 'early' for backwards compatibility, should be fine to remove
         }
     }
 
@@ -106,7 +106,7 @@ public class DeadLetterQueueInputPlugin {
     }
 
     public void run(Consumer<Queueable> queueConsumer) throws IOException, InterruptedException {
-        final DeadLetterQueueReader queueReader = getQueueReader();
+        final DeadLetterQueueReader queueReader = lazyInitQueueReader();
 
         while (open.get()) {
             DLQEntry entry = queueReader.pollEntry(100);
@@ -131,11 +131,11 @@ public class DeadLetterQueueInputPlugin {
     public void close() throws IOException {
         open.set(false);
 
+        final DeadLetterQueueReader queueReader = this.queueReader;
         CurrentSegmentAndPosition state = null;
-        if (commitOffsets && readerHasState.get()) {
+        if (queueReader != null && commitOffsets && readerHasState.get()) {
             logger.debug("retrieving current DLQ segment and position");
             try {
-                final DeadLetterQueueReader queueReader = getQueueReader();
                 state = new CurrentSegmentAndPosition(queueReader.getCurrentSegment(), queueReader.getCurrentPosition());
             } catch (Exception e) {
                 logger.error("failed to retrieve current DLQ segment and position", e);
@@ -144,8 +144,9 @@ public class DeadLetterQueueInputPlugin {
 
         try {
             logger.debug("closing DLQ reader");
-            final DeadLetterQueueReader queueReader = this.queueReader;
-            if (queueReader != null) queueReader.close();
+            if (queueReader != null) {
+                queueReader.close();
+            }
         } catch (Exception e) {
             logger.warn("error closing DLQ reader", e);
         } finally {
