@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertFalse;
 
 public class DeadLetterQueueInputPluginTests {
 
@@ -143,8 +144,10 @@ public class DeadLetterQueueInputPluginTests {
                 plugin.run((entry) -> { assertNotNull(entry); });
             } catch (NoSuchFileException e) {
                 // expected
+            } catch (IOException e) {
+                assertFalse("User limit of inotify instances reached or too many open files".equals(e.getMessage()));
+                throw e;
             }
-            // should not throw java.io.IOException "User limit of inotify instances reached or too many open files"
         }
     }
 
