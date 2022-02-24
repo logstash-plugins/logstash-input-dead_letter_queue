@@ -51,7 +51,7 @@ public class DeadLetterQueueInputPluginTests {
     }
 
     @Test
-    public void testIT() throws Exception {
+    public void testHappyPath() throws Exception {
         DeadLetterQueueWriter queueWriter = new DeadLetterQueueWriter(dir, 10_000_000, 10_000_000, Duration.ofMillis(100));
         for (int i = 0; i < 10_000; i++) {
             writeEntry(queueWriter, new DLQEntry(new Event(), "test-type", "test-id", "test_" + i));
