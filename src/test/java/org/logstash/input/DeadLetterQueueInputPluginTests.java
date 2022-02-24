@@ -28,11 +28,14 @@ import org.logstash.Timestamp;
 import org.logstash.common.io.DeadLetterQueueWriter;
 
 import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static junit.framework.Assert.assertNotNull;
 import static junit.framework.TestCase.assertEquals;
 
 public class DeadLetterQueueInputPluginTests {
@@ -125,6 +128,24 @@ public class DeadLetterQueueInputPluginTests {
 
         plugin.register();
         plugin.close();
+    }
+
+    @Test
+    public void testNonExistentQueuePath() throws Exception {
+        Path since = temporaryFolder.newFile(".sincedb").toPath();
+        Path queuePath = Paths.get(temporaryFolder.toString(), "non-existent");
+
+        int times = 0;
+        while (times++ < 1000) {
+            try {
+                DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(queuePath, true, since, null);
+                plugin.register();
+                plugin.run((entry) -> { assertNotNull(entry); });
+            } catch (NoSuchFileException e) {
+                // expected
+            }
+            // should not throw java.io.IOException "User limit of inotify instances reached or too many open files"
+        }
     }
 
     private static void writeEntry(DeadLetterQueueWriter writer, DLQEntry entry) throws IOException {

@@ -25,9 +25,12 @@ import org.logstash.Timestamp;
 import org.logstash.ackedqueue.Queueable;
 import org.logstash.common.io.DeadLetterQueueReader;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -38,14 +41,16 @@ public class DeadLetterQueueInputPlugin {
     private static final Logger logger = LogManager.getLogger(DeadLetterQueueInputPlugin.class);
 
     private final static char VERSION = '1';
-    private final DeadLetterQueueReader queueReader;
+    private final Path queuePath;
     private final boolean commitOffsets;
     private final Path sinceDbPath;
     private final AtomicBoolean open, readerHasState;
     private final Timestamp targetTimestamp;
 
-    public DeadLetterQueueInputPlugin(Path path, boolean commitOffsets, Path sinceDbPath, Timestamp targetTimestamp) throws IOException {
-        this.queueReader = new DeadLetterQueueReader(path);
+    private volatile DeadLetterQueueReader queueReader;
+
+    public DeadLetterQueueInputPlugin(Path path, boolean commitOffsets, Path sinceDbPath, Timestamp targetTimestamp) {
+        this.queuePath = path;
         this.commitOffsets = commitOffsets;
         this.open = new AtomicBoolean(true);
         this.sinceDbPath = sinceDbPath;
@@ -53,11 +58,31 @@ public class DeadLetterQueueInputPlugin {
         this.readerHasState = new AtomicBoolean(false);
     }
 
-    public DeadLetterQueueReader getQueueReader() {
+    private synchronized DeadLetterQueueReader getQueueReader() throws IOException {
+        if (queueReader == null) {
+            final File queueDir = queuePath.toFile();
+            // NOTE: avoid creating DLQReader is these fail so that on plugin restarts the inotify limit is not decremented
+            if (!queueDir.exists()) {
+                logger.warn("DLQ sub-path {} does not exist", queuePath);
+                throw new NoSuchFileException("DLQ sub-path " + queuePath + " does not exist");
+            }
+            if (!queueDir.isDirectory()) {
+                logger.warn("DLQ sub-path {} is not a directory", queuePath);
+                throw new NotDirectoryException("DLQ sub-path " + queuePath + " is not a directory");
+            }
+            this.queueReader = new DeadLetterQueueReader(queuePath);
+            setInitialReaderState(queueReader);
+        }
         return queueReader;
     }
 
     public void register() throws IOException {
+        if (queuePath.toFile().isDirectory()) {
+            getQueueReader(); // NOTE: reading sincedb 'early' for backwards compatibility, should be fine to remove
+        }
+    }
+
+    private void setInitialReaderState(final DeadLetterQueueReader queueReader) throws IOException {
         if (sinceDbPath != null && Files.exists(sinceDbPath) && targetTimestamp == null) {
             byte[] bytes = Files.readAllBytes(sinceDbPath);
             if (bytes.length == 0) {
@@ -66,7 +91,7 @@ public class DeadLetterQueueInputPlugin {
             ByteBuffer buffer = ByteBuffer.wrap(bytes);
             char version = buffer.getChar();
             if (VERSION != version) {
-                throw new RuntimeException("Sincdb version:" + version + " does not match: " +  VERSION);
+                throw new RuntimeException("Sincedb version:" + version + " does not match: " + VERSION);
             }
             int segmentPathStringLength = buffer.getInt();
             byte[] segmentPathBytes = new byte[segmentPathStringLength];
@@ -80,7 +105,9 @@ public class DeadLetterQueueInputPlugin {
         }
     }
 
-    public void run(Consumer<Queueable> queueConsumer) throws Exception {
+    public void run(Consumer<Queueable> queueConsumer) throws IOException, InterruptedException {
+        final DeadLetterQueueReader queueReader = getQueueReader();
+
         while (open.get()) {
             DLQEntry entry = queueReader.pollEntry(100);
             if (entry != null) {
