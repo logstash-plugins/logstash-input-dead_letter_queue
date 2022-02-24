@@ -102,11 +102,37 @@ public class DeadLetterQueueInputPlugin {
     }
 
     public void close() throws IOException {
-        logger.debug("closing dead letter queue input plugin");
-        if (commitOffsets && readerHasState.get()) {
-            writeOffsets(queueReader.getCurrentSegment(), queueReader.getCurrentPosition());
-        }
-        queueReader.close();
         open.set(false);
+        logger.debug("closing dead letter queue input plugin");
+
+        CurrentSegmentAndPosition state = null;
+        if (commitOffsets && readerHasState.get()) {
+            try {
+                final DeadLetterQueueReader queueReader = getQueueReader();
+                state = new CurrentSegmentAndPosition(queueReader.getCurrentSegment(), queueReader.getCurrentPosition());
+            } catch (Exception e) {
+                logger.error("failed to retrieve current DLQ segment and position", e);
+            }
+        }
+
+        try {
+            final DeadLetterQueueReader queueReader = this.queueReader;
+            if (queueReader != null) queueReader.close();
+        } catch (Exception e) {
+            logger.warn("error closing DLQ reader", e);
+        } finally {
+            if (state != null) writeOffsets(state.segmentPath, state.position);
+        }
     }
+
+    private static class CurrentSegmentAndPosition {
+        final Path segmentPath;
+        final long position;
+
+        CurrentSegmentAndPosition(Path segmentPath, long position) {
+            this.segmentPath = segmentPath;
+            this.position = position;
+        }
+    }
+
 }
