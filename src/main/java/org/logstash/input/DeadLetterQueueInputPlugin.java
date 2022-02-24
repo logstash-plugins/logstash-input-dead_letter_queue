@@ -117,18 +117,7 @@ public class DeadLetterQueueInputPlugin {
         }
     }
 
-    private void writeOffsets(final Path segment, final long offset) throws IOException {
-        logger.debug("writing DLQ offset state: {} (position: {})", segment, offset);
-        String path = segment.toAbsolutePath().toString();
-        ByteBuffer buffer = ByteBuffer.allocate(path.length() + 1 + 64);
-        buffer.putChar(VERSION);
-        buffer.putInt(path.length());
-        buffer.put(path.getBytes());
-        buffer.putLong(offset);
-        Files.write(sinceDbPath, buffer.array());
-    }
-
-    public void close() throws IOException {
+    public void close() {
         open.set(false);
 
         final DeadLetterQueueReader queueReader = this.queueReader;
@@ -150,7 +139,22 @@ public class DeadLetterQueueInputPlugin {
         } catch (Exception e) {
             logger.warn("error closing DLQ reader", e);
         } finally {
-            if (state != null) writeOffsets(state.segmentPath, state.position);
+            if (state != null) writeOffsetStateToSinceDb(state.segmentPath, state.position);
+        }
+    }
+
+    private void writeOffsetStateToSinceDb(final Path segment, final long offset) {
+        logger.debug("writing DLQ offset state: {} (position: {})", segment, offset);
+        String path = segment.toAbsolutePath().toString();
+        ByteBuffer buffer = ByteBuffer.allocate(path.length() + 1 + 64);
+        buffer.putChar(VERSION);
+        buffer.putInt(path.length());
+        buffer.put(path.getBytes());
+        buffer.putLong(offset);
+        try {
+            Files.write(sinceDbPath, buffer.array());
+        } catch (IOException e) {
+            logger.error("failed to write DLQ offset state to " + sinceDbPath, e);
         }
     }
 
