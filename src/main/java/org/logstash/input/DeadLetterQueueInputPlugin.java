@@ -44,7 +44,7 @@ public class DeadLetterQueueInputPlugin {
     private final AtomicBoolean open, readerHasState;
     private final Timestamp targetTimestamp;
 
-    public DeadLetterQueueInputPlugin(Path path, boolean commitOffsets, Path sinceDbPath, Timestamp targetTimestamp) throws Exception {
+    public DeadLetterQueueInputPlugin(Path path, boolean commitOffsets, Path sinceDbPath, Timestamp targetTimestamp) throws IOException {
         this.queueReader = new DeadLetterQueueReader(path);
         this.commitOffsets = commitOffsets;
         this.open = new AtomicBoolean(true);
