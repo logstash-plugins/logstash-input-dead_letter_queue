@@ -61,7 +61,7 @@ public class DeadLetterQueueInputPlugin {
     private synchronized DeadLetterQueueReader getQueueReader() throws IOException {
         if (queueReader == null) {
             final File queueDir = queuePath.toFile();
-            // NOTE: avoid creating DLQReader is these fail so that on plugin restarts the inotify limit is not decremented
+            // NOTE: avoid creating DLQReader if these fail so that on plugin restarts the inotify limit is not decremented
             if (!queueDir.exists()) {
                 logger.warn("DLQ sub-path {} does not exist", queuePath);
                 throw new NoSuchFileException("DLQ sub-path " + queuePath + " does not exist");
