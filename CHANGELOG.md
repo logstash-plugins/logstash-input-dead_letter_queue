@@ -1,3 +1,6 @@
+## pending
+  - Build: cleanup/review (unused) dependencies [#36](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/36)
+
 ## 1.1.11
   - Fix: pre-flight checks before creating DLQ reader [#35](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/35)
 
