@@ -19,9 +19,6 @@ project.sourceCompatibility = 1.8
 project.targetCompatibility = 1.8
 
 String log4jVersion = '2.17.1'
-String jacksonVersion = '2.9.10'
-String jacksonDatabindVersion = '2.9.10.8'
-
 
 task generateGemJarRequiresFile {
     doLast {
@@ -76,22 +73,9 @@ idea {
 
 dependencies {
   compileOnly group: "org.apache.logging.log4j", name: "log4j-api", version: "${log4jVersion}"
-  // Keep Joda version same as JRuby 1.7.25 and 9.1.9.0
-  compileOnly group: "joda-time", name: "joda-time", version: "2.8.2"
-  compileOnly "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
-  compileOnly "com.fasterxml.jackson.core:jackson-databind:${jacksonDatabindVersion}"
-  compileOnly "com.fasterxml.jackson.module:jackson-module-afterburner:${jacksonVersion}"
-  compileOnly "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:${jacksonVersion}"
-  compileOnly group: 'org.jruby', name: 'jruby-complete', version: '9.2.11.0'
-  compileOnly fileTree(dir: logstashCoreGemPath, include: '**/*.jar')
+  compileOnly fileTree(dir: logstashCoreGemPath, include: '**/logstash-core.jar')
 
   testCompile group: 'junit', name: 'junit', version: '4.12'
-  testCompile group: "org.apache.logging.log4j", name: "log4j-core", version: "${log4jVersion}"
-  testCompile group: "joda-time", name: "joda-time", version: "2.8.2"
-  testCompile "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
-  testCompile "com.fasterxml.jackson.core:jackson-databind:${jacksonDatabindVersion}"
-  testCompile "com.fasterxml.jackson.module:jackson-module-afterburner:${jacksonVersion}"
-  testCompile "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:${jacksonVersion}"
-  testCompile group: 'org.jruby', name: 'jruby-complete', version: '9.2.11.0'
+  testImplementation "org.apache.logging.log4j:log4j-core:${log4jVersion}"
   testCompile fileTree(dir: logstashCoreGemPath, include: '**/*.jar')
 }
