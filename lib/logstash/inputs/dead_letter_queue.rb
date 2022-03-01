@@ -2,6 +2,8 @@ require 'logstash/namespace'
 require 'logstash/inputs/base'
 require 'logstash-input-dead_letter_queue_jars'
 
+require 'fileutils'
+
 # Logstash input to read events from Logstash's dead letter queue
 # 
 # [source, sh]
@@ -45,7 +47,7 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
       FileUtils::mkdir_p datapath
       @sincedb_path = File.join(datapath, ".sincedb_" + Digest::MD5.hexdigest(@path))
     elsif File.directory?(@sincedb_path)
-        raise ArgumentError.new("The \"sincedb_path\" argument must point to a file, received a directory: \"#{@sincedb_path}\"")
+      raise ArgumentError.new("The \"sincedb_path\" argument must point to a file, received a directory: \"#{@sincedb_path}\"")
     end
 
     dlq_path = java.nio.file.Paths.get(File.join(@path, @pipeline_id))
@@ -53,20 +55,24 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
     start_timestamp = @start_timestamp ? org.logstash.Timestamp.new(@start_timestamp) : nil
     @inner_plugin = org.logstash.input.DeadLetterQueueInputPlugin.new(dlq_path, @commit_offsets, sincedb_path, start_timestamp)
     @inner_plugin.register
+
+    if Gem::Requirement.new('< 7.0').satisfied_by?(Gem::Version.new(LOGSTASH_CORE_VERSION))
+      @event_creator = Proc.new do |entry|
+        clone = entry.event.clone
+        # LS 6 LogStash::Event.new accept Map not Event
+        event = LogStash::Event.new(clone.getData())
+        event.set("[@metadata]", clone.getMetadata())
+        event
+      end
+    else
+      @event_creator = -> (entry) { LogStash::Event.new(entry.event.clone) }
+    end
   end # def register
 
   public
   def run(logstash_queue)
     @inner_plugin.run do |entry|
-      clone = entry.event.clone()
-      event = if Gem::Requirement.new('< 7.0').satisfied_by?(Gem::Version.new(LOGSTASH_CORE_VERSION))
-                # LS 6 LogStash::Event.new accept Map not Event
-                event = LogStash::Event.new(clone.getData())
-                event.set("[@metadata]", clone.getMetadata())
-                event
-              else
-                LogStash::Event.new(clone)
-              end
+      event = @event_creator.(entry)
       event.set("[@metadata][dead_letter_queue][plugin_type]", entry.plugin_type)
       event.set("[@metadata][dead_letter_queue][plugin_id]", entry.plugin_id)
       event.set("[@metadata][dead_letter_queue][reason]", entry.reason)

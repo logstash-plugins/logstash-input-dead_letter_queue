@@ -18,7 +18,6 @@
  */
 package org.logstash.input;
 
-import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -28,11 +27,15 @@ import org.logstash.Event;
 import org.logstash.Timestamp;
 import org.logstash.common.io.DeadLetterQueueWriter;
 
+import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static junit.framework.TestCase.assertEquals;
+import static org.junit.Assert.*;
 
 public class DeadLetterQueueInputPluginTests {
 
@@ -47,37 +50,39 @@ public class DeadLetterQueueInputPluginTests {
     }
 
     @Test
-    public void test() throws Exception {
-        DeadLetterQueueWriter queueWriter = new DeadLetterQueueWriter(dir, 100000000, 10000000);
-        DLQEntry entry = new DLQEntry(new Event(), "test", "test", "test");
-        for (int i = 0; i < 10000; i++) {
-            queueWriter.writeEntry(entry);
+    public void testHappyPath() throws Exception {
+        DeadLetterQueueWriter queueWriter = new DeadLetterQueueWriter(dir, 10_000_000, 10_000_000, Duration.ofMillis(100));
+        for (int i = 0; i < 10_000; i++) {
+            writeEntry(queueWriter, new DLQEntry(new Event(), "test-type", "test-id", "test_" + i));
         }
 
-        Path since = temporaryFolder.newFile(".sincdb").toPath();
+        Path since = temporaryFolder.newFile(".sincedb").toPath();
         DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, true, since, null);
 
         final AtomicInteger count = new AtomicInteger();
         Thread pluginThread = new Thread(() -> {
             try {
                 plugin.register();
-                plugin.run((e) -> {count.incrementAndGet();});
+                plugin.run((e) -> { count.incrementAndGet(); });
             } catch (Exception e) {
                 // do nothing
             }
         });
         pluginThread.start();
+
+        DLQEntry entry = new DLQEntry(new Event(), "test-type", "test-id", "test_shared");
+
         Thread.sleep(15000);
         assertEquals(10000, count.get());
-        queueWriter.writeEntry(entry);
-        Thread.sleep(200);
+        writeEntry(queueWriter, entry);
+        Thread.sleep(1500); // flush interval 1s
         assertEquals(10001, count.get());
         pluginThread.interrupt();
         pluginThread.join();
         plugin.close();
 
-        queueWriter.writeEntry(entry);
-        queueWriter.writeEntry(entry);
+        writeEntry(queueWriter, entry);
+        writeEntry(queueWriter, entry);
 
         DeadLetterQueueInputPlugin secondPlugin = new DeadLetterQueueInputPlugin(dir, true, since, null);
 
@@ -90,7 +95,7 @@ public class DeadLetterQueueInputPluginTests {
             }
         });
         pluginThread.start();
-        Thread.sleep(200);
+        Thread.sleep(1500); // flush interval 1s
         pluginThread.interrupt();
         pluginThread.join();
         secondPlugin.close();
@@ -99,12 +104,12 @@ public class DeadLetterQueueInputPluginTests {
 
     @Test
     public void testTimestamp() throws Exception {
-        DeadLetterQueueWriter queueWriter = new DeadLetterQueueWriter(dir, 100000, 10000000);
+        DeadLetterQueueWriter queueWriter = new DeadLetterQueueWriter(dir, 100_000, 10_000_000, Duration.ofMillis(1000));
         long epoch = 1490659200000L;
         String targetDateString = "";
         for (int i = 0; i < 10000; i++) {
             DLQEntry entry = new DLQEntry(new Event(), "test", "test", "test", new Timestamp(epoch));
-            queueWriter.writeEntry(entry);
+            writeEntry(queueWriter, entry);
             epoch += 1000;
             if (i == 800) {
                 targetDateString = entry.getEntryTime().toString();
@@ -123,4 +128,29 @@ public class DeadLetterQueueInputPluginTests {
         plugin.register();
         plugin.close();
     }
+
+    @Test
+    public void testNonExistentQueuePath() throws Exception {
+        Path since = temporaryFolder.newFile(".sincedb").toPath();
+        Path queuePath = Paths.get(temporaryFolder.toString(), "non-existent");
+
+        int times = 0;
+        while (times++ < 1000) {
+            try {
+                DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(queuePath, true, since, null);
+                plugin.register();
+                plugin.run((entry) -> { assertNotNull(entry); });
+            } catch (NoSuchFileException e) {
+                // expected
+            } catch (IOException e) {
+                assertNotEquals("User limit of inotify instances reached or too many open files", e.getMessage());
+                throw e;
+            }
+        }
+    }
+
+    private static void writeEntry(DeadLetterQueueWriter writer, DLQEntry entry) throws IOException {
+        writer.writeEntry(entry.getEvent(), entry.getPluginType(), entry.getPluginId(), entry.getReason());
+    }
+
 }
