@@ -1,13 +1,11 @@
 require "logstash/devutils/rake"
 
-gradlew = File.join(Dir.pwd, 'gradlew')
-
 task :default do
   sh('rake -T')
 end
 
 task :vendor => "gradle.properties" do
-  sh "#{gradlew} --no-daemon vendor"
+  sh "#{File.join(Dir.pwd, 'gradlew')} vendor"
 end
 
 file "gradle.properties" do
@@ -20,5 +18,4 @@ file "gradle.properties" do
   end
   puts "-------------------> Wrote #{gradle_properties_file}"
   puts File.read(gradle_properties_file)
-end
 end
