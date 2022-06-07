@@ -28,11 +28,7 @@ import org.logstash.common.io.DeadLetterQueueReader;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.NotDirectoryException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -40,7 +36,7 @@ import java.util.function.Consumer;
 public class DeadLetterQueueInputPlugin {
     private static final Logger logger = LogManager.getLogger(DeadLetterQueueInputPlugin.class);
 
-    private final static char VERSION = '1';
+    final static char VERSION = '1';
     private final Path queuePath;
     private final boolean commitOffsets;
     private final Path sinceDbPath;
@@ -48,6 +44,7 @@ public class DeadLetterQueueInputPlugin {
     private final Timestamp targetTimestamp;
 
     private volatile DeadLetterQueueReader queueReader;
+    private SinceDB sinceDb;
 
     public DeadLetterQueueInputPlugin(Path path, boolean commitOffsets, Path sinceDbPath, Timestamp targetTimestamp) {
         this.queuePath = path;
@@ -84,20 +81,12 @@ public class DeadLetterQueueInputPlugin {
 
     private void setInitialReaderState(final DeadLetterQueueReader queueReader) throws IOException {
         if (sinceDbPath != null && Files.exists(sinceDbPath) && targetTimestamp == null) {
-            byte[] bytes = Files.readAllBytes(sinceDbPath);
-            if (bytes.length == 0) {
+            sinceDb = SinceDB.load(sinceDbPath);
+            if (sinceDb == null) {
                 return;
             }
-            ByteBuffer buffer = ByteBuffer.wrap(bytes);
-            char version = buffer.getChar();
-            if (VERSION != version) {
-                throw new RuntimeException("Sincedb version:" + version + " does not match: " + VERSION);
-            }
-            int segmentPathStringLength = buffer.getInt();
-            byte[] segmentPathBytes = new byte[segmentPathStringLength];
-            buffer.get(segmentPathBytes);
-            long offset = buffer.getLong();
-            queueReader.setCurrentReaderAndPosition(Paths.get(new String(segmentPathBytes)), offset);
+
+            queueReader.setCurrentReaderAndPosition(sinceDb.getCurrentSegment(), sinceDb.getOffset());
             readerHasState.set(true);
         } else if (targetTimestamp != null) {
             queueReader.seekToNextEvent(targetTimestamp);
@@ -124,6 +113,10 @@ public class DeadLetterQueueInputPlugin {
         CurrentSegmentAndPosition state = null;
         if (queueReader != null && commitOffsets && readerHasState.get()) {
             logger.debug("retrieving current DLQ segment and position");
+            if (sinceDb == null) {
+                sinceDb = new SinceDB(sinceDbPath, Paths.get(System.getProperty("user.home")), 0);
+            }
+            sinceDb.update(queueReader);
             try {
                 state = new CurrentSegmentAndPosition(queueReader.getCurrentSegment(), queueReader.getCurrentPosition());
             } catch (Exception e) {
@@ -139,7 +132,10 @@ public class DeadLetterQueueInputPlugin {
         } catch (Exception e) {
             logger.warn("error closing DLQ reader", e);
         } finally {
-            if (state != null) writeOffsetStateToSinceDb(state.segmentPath, state.position);
+            if (sinceDb != null) {
+                sinceDb.flush();
+//                writeOffsetStateToSinceDb(state.segmentPath, state.position);
+            }
         }
     }
 
