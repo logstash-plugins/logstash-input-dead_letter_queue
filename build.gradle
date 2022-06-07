@@ -77,5 +77,6 @@ dependencies {
 
   testCompile group: 'junit', name: 'junit', version: '4.12'
   testImplementation "org.apache.logging.log4j:log4j-core:${log4jVersion}"
+  testImplementation group: 'org.jruby', name: 'jruby-complete', version: "9.2.11.0"
   testCompile fileTree(dir: logstashCoreGemPath, include: '**/*.jar')
 }
