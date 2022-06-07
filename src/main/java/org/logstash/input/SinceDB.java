@@ -18,7 +18,7 @@ final class SinceDB {
     private Path currentSegment;
     private long offset;
 
-    public SinceDB(Path sinceDbPath, Path currentSegment, long offset) {
+    private SinceDB(Path sinceDbPath, Path currentSegment, long offset) {
         this.sinceDbPath = sinceDbPath;
         this.currentSegment = currentSegment;
         this.offset = offset;
@@ -30,16 +30,30 @@ final class SinceDB {
             return Optional.empty();
         }
         ByteBuffer buffer = ByteBuffer.wrap(bytes);
+        verifyVersion(buffer);
+        Path segmentPath = decodePath(buffer);
+        long offset = buffer.getLong();
+
+        return Optional.of(new SinceDB(sinceDbPath, segmentPath, offset));
+    }
+
+    private static Path decodePath(ByteBuffer buffer) {
+        int segmentPathStringLength = buffer.getInt();
+        byte[] segmentPathBytes = new byte[segmentPathStringLength];
+        buffer.get(segmentPathBytes);
+        Path segmentPath = Paths.get(new String(segmentPathBytes));
+        return segmentPath;
+    }
+
+    private static void verifyVersion(ByteBuffer buffer) {
         char version = buffer.getChar();
         if (DeadLetterQueueInputPlugin.VERSION != version) {
             throw new RuntimeException("Sincedb version:" + version + " does not match: " + DeadLetterQueueInputPlugin.VERSION);
         }
-        int segmentPathStringLength = buffer.getInt();
-        byte[] segmentPathBytes = new byte[segmentPathStringLength];
-        buffer.get(segmentPathBytes);
-        long offset = buffer.getLong();
+    }
 
-        return Optional.of(new SinceDB(sinceDbPath, Paths.get(new String(segmentPathBytes)), offset));
+    static Optional<SinceDB> createEmpty(Path sinceDbPath) {
+        return Optional.of(new SinceDB(sinceDbPath, Paths.get(System.getProperty("user.home")), 0));
     }
 
     public void flush() {
@@ -69,7 +83,7 @@ final class SinceDB {
         return offset;
     }
 
-    public void update(DeadLetterQueueReader reader) {
+    public void updatePosition(DeadLetterQueueReader reader) {
         updatePosition(reader.getCurrentSegment(), reader.getCurrentPosition());
     }
 

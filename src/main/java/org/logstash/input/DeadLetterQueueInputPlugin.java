@@ -31,7 +31,6 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -117,10 +116,10 @@ public class DeadLetterQueueInputPlugin {
         if (queueReader != null && commitOffsets && readerHasState.get()) {
             logger.debug("retrieving current DLQ segment and position");
             if (!sinceDb.isPresent()) {
-                sinceDb = Optional.of(new SinceDB(sinceDbPath, Paths.get(System.getProperty("user.home")), 0));
+                sinceDb = SinceDB.createEmpty(sinceDbPath);
             }
             try {
-                sinceDb.get().update(queueReader);
+                sinceDb.get().updatePosition(queueReader);
             } catch (Exception e) {
                 logger.error("failed to retrieve current DLQ segment and position", e);
             }
