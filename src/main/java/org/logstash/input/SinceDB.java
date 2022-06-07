@@ -9,6 +9,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 
 final class SinceDB {
     private static final Logger logger = LogManager.getLogger(SinceDB.class);
@@ -23,10 +24,10 @@ final class SinceDB {
         this.offset = offset;
     }
 
-    static SinceDB load(Path sinceDbPath) throws IOException {
+    static Optional<SinceDB> load(Path sinceDbPath) throws IOException {
         byte[] bytes = Files.readAllBytes(sinceDbPath);
         if (bytes.length == 0) {
-            return null;
+            return Optional.empty();
         }
         ByteBuffer buffer = ByteBuffer.wrap(bytes);
         char version = buffer.getChar();
@@ -38,7 +39,7 @@ final class SinceDB {
         buffer.get(segmentPathBytes);
         long offset = buffer.getLong();
 
-        return new SinceDB(sinceDbPath, Paths.get(new String(segmentPathBytes)), offset);
+        return Optional.of(new SinceDB(sinceDbPath, Paths.get(new String(segmentPathBytes)), offset));
     }
 
     public void flush() {
