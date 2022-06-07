@@ -27,8 +27,11 @@ import org.logstash.common.io.DeadLetterQueueReader;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.NotDirectoryException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -110,18 +113,12 @@ public class DeadLetterQueueInputPlugin {
         open.set(false);
 
         final DeadLetterQueueReader queueReader = this.queueReader;
-        CurrentSegmentAndPosition state = null;
         if (queueReader != null && commitOffsets && readerHasState.get()) {
             logger.debug("retrieving current DLQ segment and position");
             if (sinceDb == null) {
                 sinceDb = new SinceDB(sinceDbPath, Paths.get(System.getProperty("user.home")), 0);
             }
             sinceDb.update(queueReader);
-            try {
-                state = new CurrentSegmentAndPosition(queueReader.getCurrentSegment(), queueReader.getCurrentPosition());
-            } catch (Exception e) {
-                logger.error("failed to retrieve current DLQ segment and position", e);
-            }
         }
 
         try {
@@ -134,34 +131,7 @@ public class DeadLetterQueueInputPlugin {
         } finally {
             if (sinceDb != null) {
                 sinceDb.flush();
-//                writeOffsetStateToSinceDb(state.segmentPath, state.position);
             }
         }
     }
-
-    private void writeOffsetStateToSinceDb(final Path segment, final long offset) {
-        logger.debug("writing DLQ offset state: {} (position: {})", segment, offset);
-        String path = segment.toAbsolutePath().toString();
-        ByteBuffer buffer = ByteBuffer.allocate(path.length() + 1 + 64);
-        buffer.putChar(VERSION);
-        buffer.putInt(path.length());
-        buffer.put(path.getBytes());
-        buffer.putLong(offset);
-        try {
-            Files.write(sinceDbPath, buffer.array());
-        } catch (IOException e) {
-            logger.error("failed to write DLQ offset state to " + sinceDbPath, e);
-        }
-    }
-
-    private static class CurrentSegmentAndPosition {
-        final Path segmentPath;
-        final long position;
-
-        CurrentSegmentAndPosition(Path segmentPath, long position) {
-            this.segmentPath = segmentPath;
-            this.position = position;
-        }
-    }
-
 }
