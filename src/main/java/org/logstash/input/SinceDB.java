@@ -9,14 +9,41 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Optional;
 
-final class SinceDB {
+class SinceDB {
+
+    final static class UnassignedSinceDB extends SinceDB {
+
+        private UnassignedSinceDB(Path sinceDbPath) {
+            super(sinceDbPath, Paths.get(System.getProperty("user.home")), 0);
+        }
+
+        @Override
+        public boolean isAssigned() {
+            return false;
+        }
+
+        @Override
+        public void flush() {
+            // unassigned SinceDB hasn't anything to flush
+        }
+
+        @Override
+        public Path getCurrentSegment() {
+            throw new IllegalStateException("Unassigned SinceDB doesn't have currentSegment");
+        }
+
+        @Override
+        public long getOffset() {
+            throw new IllegalStateException("Unassigned SinceDB doesn't have offset");
+        }
+    }
+
     private static final Logger logger = LogManager.getLogger(SinceDB.class);
 
     private final Path sinceDbPath;
-    private Path currentSegment;
-    private long offset;
+    private final Path currentSegment;
+    private final long offset;
 
     private SinceDB(Path sinceDbPath, Path currentSegment, long offset) {
         this.sinceDbPath = sinceDbPath;
@@ -24,25 +51,24 @@ final class SinceDB {
         this.offset = offset;
     }
 
-    static Optional<SinceDB> load(Path sinceDbPath) throws IOException {
+    static SinceDB load(Path sinceDbPath) throws IOException {
         byte[] bytes = Files.readAllBytes(sinceDbPath);
         if (bytes.length == 0) {
-            return Optional.empty();
+            return createUnassigned(sinceDbPath);
         }
         ByteBuffer buffer = ByteBuffer.wrap(bytes);
         verifyVersion(buffer);
         Path segmentPath = decodePath(buffer);
         long offset = buffer.getLong();
 
-        return Optional.of(new SinceDB(sinceDbPath, segmentPath, offset));
+        return new SinceDB(sinceDbPath, segmentPath, offset);
     }
 
     private static Path decodePath(ByteBuffer buffer) {
         int segmentPathStringLength = buffer.getInt();
         byte[] segmentPathBytes = new byte[segmentPathStringLength];
         buffer.get(segmentPathBytes);
-        Path segmentPath = Paths.get(new String(segmentPathBytes));
-        return segmentPath;
+        return Paths.get(new String(segmentPathBytes));
     }
 
     private static void verifyVersion(ByteBuffer buffer) {
@@ -52,8 +78,8 @@ final class SinceDB {
         }
     }
 
-    static Optional<SinceDB> createEmpty(Path sinceDbPath) {
-        return Optional.of(new SinceDB(sinceDbPath, Paths.get(System.getProperty("user.home")), 0));
+    static SinceDB createUnassigned(Path sinceDbPath) {
+        return new UnassignedSinceDB(sinceDbPath);
     }
 
     public void flush() {
@@ -74,7 +100,6 @@ final class SinceDB {
         }
     }
 
-
     public Path getCurrentSegment() {
         return currentSegment;
     }
@@ -83,12 +108,11 @@ final class SinceDB {
         return offset;
     }
 
-    public void updatePosition(DeadLetterQueueReader reader) {
-        updatePosition(reader.getCurrentSegment(), reader.getCurrentPosition());
+    public SinceDB updatePosition(DeadLetterQueueReader reader) {
+        return new SinceDB(this.sinceDbPath, reader.getCurrentSegment(), reader.getCurrentPosition());
     }
 
-    private void updatePosition(Path segment, long offset) {
-        this.currentSegment = segment;
-        this.offset = offset;
+    public boolean isAssigned() {
+        return true;
     }
 }

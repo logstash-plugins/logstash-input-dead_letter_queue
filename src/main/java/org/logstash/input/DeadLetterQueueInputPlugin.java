@@ -31,7 +31,6 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -47,7 +46,7 @@ public class DeadLetterQueueInputPlugin {
     private final Timestamp targetTimestamp;
 
     private volatile DeadLetterQueueReader queueReader;
-    private Optional<SinceDB> sinceDb = Optional.empty();
+    private SinceDB sinceDb;
 
     public DeadLetterQueueInputPlugin(Path path, boolean commitOffsets, Path sinceDbPath, Timestamp targetTimestamp) {
         this.queuePath = path;
@@ -56,6 +55,7 @@ public class DeadLetterQueueInputPlugin {
         this.sinceDbPath = sinceDbPath;
         this.targetTimestamp = targetTimestamp;
         this.readerHasState = new AtomicBoolean(false);
+        this.sinceDb = SinceDB.createUnassigned(sinceDbPath);
     }
 
     private synchronized DeadLetterQueueReader lazyInitQueueReader() throws IOException {
@@ -85,11 +85,11 @@ public class DeadLetterQueueInputPlugin {
     private void setInitialReaderState(final DeadLetterQueueReader queueReader) throws IOException {
         if (sinceDbPath != null && Files.exists(sinceDbPath) && targetTimestamp == null) {
             sinceDb = SinceDB.load(sinceDbPath);
-            if (!sinceDb.isPresent()) {
+            if (!sinceDb.isAssigned()) {
                 return;
             }
 
-            queueReader.setCurrentReaderAndPosition(sinceDb.get().getCurrentSegment(), sinceDb.get().getOffset());
+            queueReader.setCurrentReaderAndPosition(sinceDb.getCurrentSegment(), sinceDb.getOffset());
             readerHasState.set(true);
         } else if (targetTimestamp != null) {
             queueReader.seekToNextEvent(targetTimestamp);
@@ -115,10 +115,7 @@ public class DeadLetterQueueInputPlugin {
         final DeadLetterQueueReader queueReader = this.queueReader;
         if (queueReader != null && commitOffsets && readerHasState.get()) {
             logger.debug("retrieving current DLQ segment and position");
-            if (!sinceDb.isPresent()) {
-                sinceDb = SinceDB.createEmpty(sinceDbPath);
-            }
-            sinceDb.get().updatePosition(queueReader);
+            sinceDb = sinceDb.updatePosition(queueReader);
         }
 
         try {
@@ -129,7 +126,7 @@ public class DeadLetterQueueInputPlugin {
         } catch (Exception e) {
             logger.warn("error closing DLQ reader", e);
         } finally {
-            sinceDb.ifPresent(SinceDB::flush);
+            sinceDb.flush();
         }
     }
 }
