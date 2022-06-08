@@ -118,11 +118,7 @@ public class DeadLetterQueueInputPlugin {
             if (!sinceDb.isPresent()) {
                 sinceDb = SinceDB.createEmpty(sinceDbPath);
             }
-            try {
-                sinceDb.get().updatePosition(queueReader);
-            } catch (Exception e) {
-                logger.error("failed to retrieve current DLQ segment and position", e);
-            }
+            sinceDb.get().updatePosition(queueReader);
         }
 
         try {
