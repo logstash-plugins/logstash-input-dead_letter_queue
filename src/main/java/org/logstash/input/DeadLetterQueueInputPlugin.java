@@ -115,7 +115,7 @@ public class DeadLetterQueueInputPlugin {
         final DeadLetterQueueReader queueReader = this.queueReader;
         if (queueReader != null && commitOffsets && readerHasState.get()) {
             logger.debug("retrieving current DLQ segment and position");
-            sinceDb = sinceDb.updatePosition(queueReader);
+            sinceDb = sinceDb.retrieveNewPosition(queueReader);
         }
 
         try {

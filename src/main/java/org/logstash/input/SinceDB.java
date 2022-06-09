@@ -108,7 +108,13 @@ class SinceDB {
         return offset;
     }
 
-    public SinceDB updatePosition(DeadLetterQueueReader reader) {
+    /**
+     * Create new SinceDB instance retrieving the position of reader.
+     * 
+     * @param reader the reader that needs to be queried.
+     * @return new instance of SinceDB containing the new position.
+     * */
+    public SinceDB retrieveNewPosition(DeadLetterQueueReader reader) {
         return new SinceDB(this.sinceDbPath, reader.getCurrentSegment(), reader.getCurrentPosition());
     }
 
