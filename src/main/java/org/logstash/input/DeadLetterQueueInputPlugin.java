@@ -48,14 +48,14 @@ public class DeadLetterQueueInputPlugin {
     private volatile DeadLetterQueueReader queueReader;
     private SinceDB sinceDb;
 
-    public DeadLetterQueueInputPlugin(Path path, boolean commitOffsets, Path sinceDbPath, Timestamp targetTimestamp) {
+    public DeadLetterQueueInputPlugin(Path path, boolean commitOffsets, Path sinceDbPath, Timestamp targetTimestamp) throws IOException {
         this.queuePath = path;
         this.commitOffsets = commitOffsets;
         this.open = new AtomicBoolean(true);
         this.sinceDbPath = sinceDbPath;
         this.targetTimestamp = targetTimestamp;
         this.readerHasState = new AtomicBoolean(false);
-        this.sinceDb = SinceDB.createUnassigned(sinceDbPath);
+        this.sinceDb = SinceDB.fromPath(sinceDbPath);
     }
 
     private synchronized DeadLetterQueueReader lazyInitQueueReader() throws IOException {
@@ -84,7 +84,7 @@ public class DeadLetterQueueInputPlugin {
 
     private void setInitialReaderState(final DeadLetterQueueReader queueReader) throws IOException {
         if (sinceDbPath != null && Files.exists(sinceDbPath) && targetTimestamp == null) {
-            sinceDb = SinceDB.load(sinceDbPath);
+            sinceDb = SinceDB.fromPath(sinceDbPath);
             if (!sinceDb.isAssigned()) {
                 return;
             }
@@ -115,7 +115,7 @@ public class DeadLetterQueueInputPlugin {
         final DeadLetterQueueReader queueReader = this.queueReader;
         if (queueReader != null && commitOffsets && readerHasState.get()) {
             logger.debug("retrieving current DLQ segment and position");
-            sinceDb = sinceDb.retrieveNewPosition(queueReader);
+            sinceDb = SinceDB.getUpdated(sinceDb, queueReader);
         }
 
         try {
