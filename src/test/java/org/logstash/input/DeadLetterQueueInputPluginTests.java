@@ -114,7 +114,8 @@ public class DeadLetterQueueInputPluginTests {
                 targetDateString = entry.getEntryTime().toString();
             }
         }
-        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, false, null, new Timestamp(targetDateString));
+        Path since = temporaryFolder.newFile(".sincedb").toPath();
+        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, false, since, new Timestamp(targetDateString));
         plugin.register();
     }
 
