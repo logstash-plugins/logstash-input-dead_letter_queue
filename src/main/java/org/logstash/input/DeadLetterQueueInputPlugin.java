@@ -75,7 +75,13 @@ public class DeadLetterQueueInputPlugin {
                 logger.warn("DLQ sub-path {} is not a directory", queuePath);
                 throw new NotDirectoryException("DLQ sub-path " + queuePath + " is not a directory");
             }
-            this.queueReader = new DeadLetterQueueReader(queuePath, cleanConsumed, this::persistSinceDB);
+            if (cleanConsumed) {
+                // cleanConsumed is true only for Logstash >= 8.4.0 which provides this constructor,
+                // else fallback to the old constructor.
+                this.queueReader = new DeadLetterQueueReader(queuePath, cleanConsumed, this::persistSinceDB);
+            } else {
+                this.queueReader = new DeadLetterQueueReader(queuePath);
+            }
             setInitialReaderState(queueReader);
         }
         return queueReader;
