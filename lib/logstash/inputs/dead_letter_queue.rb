@@ -21,6 +21,11 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
 
   default :codec, 'plain'
 
+  # If true deletes the DLQ segments that has been processed.
+  # Supported only Logstash >= 8.4.0
+  # If this setting is `true` and Logstash version doesn't provides this feature then result in a configuration error.
+  # When set to `true` implicitly forces `commit_offsets` to `true`.
+  config :clean_consumed, :validate => :boolean, :default => false
   # Path to the dead letter queue directory which was created by a Logstash instance.
   # This is the path from where "dead" events are read from and is typically configured 
   # in the original Logstash instance with the setting path.dead_letter_queue.
@@ -53,10 +58,18 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
     dlq_path = java.nio.file.Paths.get(File.join(@path, @pipeline_id))
     sincedb_path = @sincedb_path ? java.nio.file.Paths.get(@sincedb_path) : nil
     start_timestamp = @start_timestamp ? org.logstash.Timestamp.new(@start_timestamp) : nil
-    @inner_plugin = org.logstash.input.DeadLetterQueueInputPlugin.new(dlq_path, @commit_offsets, sincedb_path, start_timestamp)
+    @logstash_version = Gem::Version.new(LOGSTASH_CORE_VERSION)
+    if clean_consumed && !Gem::Requirement.new('>= 8.4.0').satisfied_by?(@logstash_version)
+      raise ConfigurationError.new("clean_consumed can be used only with Logstash version 8.4.0 and above")
+    end
+    if clean_consumed
+      # clean_consumed implicitly requires the commit of offset
+      @commit_offsets = true
+    end
+    @inner_plugin = org.logstash.input.DeadLetterQueueInputPlugin.new(dlq_path, @commit_offsets, sincedb_path, start_timestamp, clean_consumed)
     @inner_plugin.register
 
-    if Gem::Requirement.new('< 7.0').satisfied_by?(Gem::Version.new(LOGSTASH_CORE_VERSION))
+    if Gem::Requirement.new('< 7.0').satisfied_by?(@logstash_version)
       @event_creator = Proc.new do |entry|
         clone = entry.event.clone
         # LS 6 LogStash::Event.new accept Map not Event

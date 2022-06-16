@@ -38,9 +38,12 @@ import java.util.function.Consumer;
 public class DeadLetterQueueInputPlugin {
     private static final Logger logger = LogManager.getLogger(DeadLetterQueueInputPlugin.class);
 
+    private static final int MAX_FLUSH_READS = 100;
+
     final static char VERSION = '1';
     private final Path queuePath;
     private final boolean commitOffsets;
+    private final boolean cleanConsumed;
     private final Path sinceDbPath;
     private final AtomicBoolean open, readerHasState;
     private final Timestamp targetTimestamp;
@@ -48,9 +51,11 @@ public class DeadLetterQueueInputPlugin {
     private volatile DeadLetterQueueReader queueReader;
     private SinceDB sinceDb;
 
-    public DeadLetterQueueInputPlugin(Path path, boolean commitOffsets, Path sinceDbPath, Timestamp targetTimestamp) throws IOException {
+    public DeadLetterQueueInputPlugin(Path path, boolean commitOffsets, Path sinceDbPath, Timestamp targetTimestamp,
+                                      boolean cleanConsumed) throws IOException {
         this.queuePath = path;
         this.commitOffsets = commitOffsets;
+        this.cleanConsumed = cleanConsumed;
         this.open = new AtomicBoolean(true);
         this.sinceDbPath = sinceDbPath;
         this.targetTimestamp = targetTimestamp;
@@ -70,10 +75,15 @@ public class DeadLetterQueueInputPlugin {
                 logger.warn("DLQ sub-path {} is not a directory", queuePath);
                 throw new NotDirectoryException("DLQ sub-path " + queuePath + " is not a directory");
             }
-            this.queueReader = new DeadLetterQueueReader(queuePath);
+            this.queueReader = new DeadLetterQueueReader(queuePath, cleanConsumed, this::persistSinceDB);
             setInitialReaderState(queueReader);
         }
         return queueReader;
+    }
+
+    private void persistSinceDB() {
+        sinceDb = SinceDB.getUpdated(sinceDb, queueReader);
+        sinceDb.flush();
     }
 
     public void register() throws IOException {
@@ -99,12 +109,20 @@ public class DeadLetterQueueInputPlugin {
 
     public void run(Consumer<Queueable> queueConsumer) throws IOException, InterruptedException {
         final DeadLetterQueueReader queueReader = lazyInitQueueReader();
+        int readsCounter = 0;
 
         while (open.get()) {
             DLQEntry entry = queueReader.pollEntry(100);
             if (entry != null) {
                 readerHasState.set(true);
                 queueConsumer.accept(entry);
+                if (cleanConsumed) {
+                    readsCounter++;
+                    if (readsCounter >= MAX_FLUSH_READS) {
+                        queueReader.markForDelete();
+                        readsCounter = 0;
+                    }
+                }
             }
         }
     }

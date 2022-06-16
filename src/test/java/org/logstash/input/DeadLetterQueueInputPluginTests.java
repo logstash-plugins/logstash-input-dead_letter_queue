@@ -56,7 +56,7 @@ public class DeadLetterQueueInputPluginTests {
         }
 
         Path since = temporaryFolder.newFile(".sincedb").toPath();
-        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, true, since, null);
+        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, true, since, null, false);
 
         final AtomicInteger count = new AtomicInteger();
         Thread pluginThread = new Thread(() -> {
@@ -83,7 +83,7 @@ public class DeadLetterQueueInputPluginTests {
         writeEntry(queueWriter, entry);
         writeEntry(queueWriter, entry);
 
-        DeadLetterQueueInputPlugin secondPlugin = new DeadLetterQueueInputPlugin(dir, true, since, null);
+        DeadLetterQueueInputPlugin secondPlugin = new DeadLetterQueueInputPlugin(dir, true, since, null, false);
 
         pluginThread = new Thread(() -> {
             try {
@@ -115,7 +115,7 @@ public class DeadLetterQueueInputPluginTests {
             }
         }
         Path since = temporaryFolder.newFile(".sincedb").toPath();
-        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, false, since, new Timestamp(targetDateString));
+        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, false, since, new Timestamp(targetDateString), false);
         plugin.register();
     }
 
@@ -123,7 +123,7 @@ public class DeadLetterQueueInputPluginTests {
     public void testClosingEmptyDlq() throws Exception {
         // Plugin does nothing and does not crash
         Path since = temporaryFolder.newFile(".sincedb").toPath();
-        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, true, since, null);
+        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, true, since, null, false);
 
         plugin.register();
         plugin.close();
@@ -137,7 +137,7 @@ public class DeadLetterQueueInputPluginTests {
         int times = 0;
         while (times++ < 1000) {
             try {
-                DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(queuePath, true, since, null);
+                DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(queuePath, true, since, null, false);
                 plugin.register();
                 plugin.run((entry) -> { assertNotNull(entry); });
             } catch (NoSuchFileException e) {
