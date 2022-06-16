@@ -1,4 +1,6 @@
-## pending
+## 1.1.12
+  - Fix: Replace use of block with lambda to fix wrong number of arguments error on jruby-9.3.4.0 [#42](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/42)
+  - Refactor: separated sinceDb management is its separate class [#40](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/40)
   - Build: cleanup/review (unused) dependencies [#36](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/36)
   - Build: refactor tasks (runnable on windows) [#37](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/37)
 
