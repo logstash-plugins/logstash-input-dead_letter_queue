@@ -71,7 +71,7 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
 
   public
   def run(logstash_queue)
-    @inner_plugin.run do |entry|
+    @inner_plugin.run(lambda do |entry|
       event = @event_creator.(entry)
       event.set("[@metadata][dead_letter_queue][plugin_type]", entry.plugin_type)
       event.set("[@metadata][dead_letter_queue][plugin_id]", entry.plugin_id)
@@ -79,7 +79,7 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
       event.set("[@metadata][dead_letter_queue][entry_time]", entry.entry_time)
       decorate(event)
       logstash_queue << event
-    end
+    end)
   end # def run
 
   public
