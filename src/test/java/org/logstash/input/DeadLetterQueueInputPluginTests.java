@@ -50,7 +50,9 @@ public class DeadLetterQueueInputPluginTests {
 
     @Test
     public void testHappyPath() throws Exception {
-        DeadLetterQueueWriter queueWriter = new DeadLetterQueueWriter(dir, 10_000_000, 10_000_000, Duration.ofMillis(100));
+        DeadLetterQueueWriter queueWriter = DeadLetterQueueWriter
+                .newBuilder(dir, 10_000_000, 10_000_000, Duration.ofMillis(100))
+                .build();
         for (int i = 0; i < 10_000; i++) {
             writeEntry(queueWriter, new DLQEntry(new Event(), "test-type", "test-id", "test_" + i));
         }
@@ -103,7 +105,9 @@ public class DeadLetterQueueInputPluginTests {
 
     @Test
     public void testTimestamp() throws Exception {
-        DeadLetterQueueWriter queueWriter = new DeadLetterQueueWriter(dir, 100_000, 10_000_000, Duration.ofMillis(1000));
+        DeadLetterQueueWriter queueWriter = DeadLetterQueueWriter
+                .newBuilder(dir, 100_000, 10_000_000, Duration.ofMillis(1000))
+                .build();
         long epoch = 1490659200000L;
         String targetDateString = "";
         for (int i = 0; i < 10000; i++) {
