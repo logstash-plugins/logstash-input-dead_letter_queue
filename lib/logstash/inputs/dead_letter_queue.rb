@@ -58,8 +58,8 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
     dlq_path = java.nio.file.Paths.get(File.join(@path, @pipeline_id))
     sincedb_path = @sincedb_path ? java.nio.file.Paths.get(@sincedb_path) : nil
     start_timestamp = @start_timestamp ? org.logstash.Timestamp.new(@start_timestamp) : nil
-    @logstash_version = Gem::Version.new(LOGSTASH_CORE_VERSION)
-    if clean_consumed && !Gem::Requirement.new('>= 8.4.0').satisfied_by?(@logstash_version)
+    logstash_version = Gem::Version.new(LOGSTASH_CORE_VERSION)
+    if clean_consumed && !Gem::Requirement.new('>= 8.4.0').satisfied_by?(logstash_version)
       raise ConfigurationError.new("clean_consumed can be used only with Logstash version 8.4.0 and above")
     end
     if clean_consumed
@@ -69,7 +69,7 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
     @inner_plugin = org.logstash.input.DeadLetterQueueInputPlugin.new(dlq_path, @commit_offsets, sincedb_path, start_timestamp, clean_consumed)
     @inner_plugin.register
 
-    if Gem::Requirement.new('< 7.0').satisfied_by?(@logstash_version)
+    if Gem::Requirement.new('< 7.0').satisfied_by?(logstash_version)
       @event_creator = Proc.new do |entry|
         clone = entry.event.clone
         # LS 6 LogStash::Event.new accept Map not Event
