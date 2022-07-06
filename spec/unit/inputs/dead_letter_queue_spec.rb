@@ -29,14 +29,14 @@ describe LogStash::Inputs::DeadLetterQueue do
   context "when clean_consumed is enabled" do
     let(:config) { super().merge!("clean_consumed" => true) }
 
-    it "shouldn't register" do
+    it "registers successfully" do
       expect {subject.register}.to_not raise_error
     end
 
     context "and commit_offsets is not" do
       let(:config) { super().merge!("commit_offsets" => false) }
-      it "shouldn't register" do
-        expect {subject.register}.to raise_error
+      it "raises a configuration error during register" do
+        expect {subject.register}.to raise_error(LogStash::ConfigurationError)
       end
     end
   end

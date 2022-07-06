@@ -64,7 +64,7 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
     end
     if clean_consumed && !commit_offsets
       # clean_consumed requires the commit of offset
-      raise ConfigurationError.new("clean_consumed requires that also commit_offsets is enabled to work properly")
+      raise ConfigurationError.new("enabling clean_consumed requires commit_offsets to also be enabled")
     end
     @inner_plugin = org.logstash.input.DeadLetterQueueInputPlugin.new(dlq_path, @commit_offsets, sincedb_path, start_timestamp, clean_consumed)
     @inner_plugin.register
