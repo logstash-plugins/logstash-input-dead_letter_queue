@@ -60,11 +60,11 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
     start_timestamp = @start_timestamp ? org.logstash.Timestamp.new(@start_timestamp) : nil
     logstash_version = Gem::Version.new(LOGSTASH_CORE_VERSION)
     if clean_consumed && !Gem::Requirement.new('>= 8.4.0').satisfied_by?(logstash_version)
-      raise ConfigurationError.new("clean_consumed can be used only with Logstash version 8.4.0 and above")
+      raise LogStash::ConfigurationError.new("clean_consumed can be used only with Logstash version 8.4.0 and above")
     end
     if clean_consumed && !commit_offsets
       # clean_consumed requires the commit of offset
-      raise ConfigurationError.new("enabling clean_consumed requires commit_offsets to also be enabled")
+      raise LogStash::ConfigurationError.new("enabling clean_consumed requires commit_offsets to also be enabled")
     end
     @inner_plugin = org.logstash.input.DeadLetterQueueInputPlugin.new(dlq_path, @commit_offsets, sincedb_path, start_timestamp, clean_consumed)
     @inner_plugin.register
