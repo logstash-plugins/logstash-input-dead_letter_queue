@@ -62,9 +62,9 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
     if clean_consumed && !Gem::Requirement.new('>= 8.4.0').satisfied_by?(logstash_version)
       raise ConfigurationError.new("clean_consumed can be used only with Logstash version 8.4.0 and above")
     end
-    if clean_consumed
-      # clean_consumed implicitly requires the commit of offset
-      @commit_offsets = true
+    if clean_consumed && !commit_offsets
+      # clean_consumed requires the commit of offset
+      raise ConfigurationError.new("clean_consumed requires that also commit_offsets is enabled to work properly")
     end
     @inner_plugin = org.logstash.input.DeadLetterQueueInputPlugin.new(dlq_path, @commit_offsets, sincedb_path, start_timestamp, clean_consumed)
     @inner_plugin.register
