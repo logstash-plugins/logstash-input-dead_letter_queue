@@ -66,7 +66,11 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
       # clean_consumed requires the commit of offset
       raise LogStash::ConfigurationError.new("enabling clean_consumed requires commit_offsets to also be enabled")
     end
-    @inner_plugin = org.logstash.input.DeadLetterQueueInputPlugin.new(dlq_path, @commit_offsets, sincedb_path, start_timestamp, clean_consumed)
+    @inner_plugin = org.logstash.input.DeadLetterQueueInputPlugin.new(dlq_path, @commit_offsets, sincedb_path, start_timestamp, clean_consumed,
+            lambda do |segments, events|
+                metric.gauge(:consumed_segments, segments)
+                metric.gauge(:consumed_events, events)
+            end)
     @inner_plugin.register
 
     if Gem::Requirement.new('< 7.0').satisfied_by?(logstash_version)

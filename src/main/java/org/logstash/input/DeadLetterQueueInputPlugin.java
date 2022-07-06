@@ -37,6 +37,12 @@ import java.util.function.Consumer;
 
 
 public class DeadLetterQueueInputPlugin implements SegmentListener {
+
+    @FunctionalInterface
+    public interface UpdateConsumedMetrics {
+        void segmentsDeleted(int segments, long events);
+    }
+
     private static final Logger logger = LogManager.getLogger(DeadLetterQueueInputPlugin.class);
 
     private static final int MAX_FLUSH_READS = 100;
@@ -51,9 +57,10 @@ public class DeadLetterQueueInputPlugin implements SegmentListener {
 
     private volatile DeadLetterQueueReader queueReader;
     private SinceDB sinceDb;
+    private UpdateConsumedMetrics updater;
 
     public DeadLetterQueueInputPlugin(Path path, boolean commitOffsets, Path sinceDbPath, Timestamp targetTimestamp,
-                                      boolean cleanConsumed) throws IOException {
+                                      boolean cleanConsumed, UpdateConsumedMetrics updater) throws IOException {
         this.queuePath = path;
         this.commitOffsets = commitOffsets;
         this.cleanConsumed = cleanConsumed;
@@ -62,6 +69,7 @@ public class DeadLetterQueueInputPlugin implements SegmentListener {
         this.targetTimestamp = targetTimestamp;
         this.readerHasState = new AtomicBoolean(false);
         this.sinceDb = SinceDB.fromPath(sinceDbPath);
+        this.updater = updater;
     }
 
     private synchronized DeadLetterQueueReader lazyInitQueueReader() throws IOException {
@@ -96,7 +104,9 @@ public class DeadLetterQueueInputPlugin implements SegmentListener {
 
     @Override
     public void segmentsDeleted(int segments, long events) {
-
+        if (updater != null) {
+            updater.segmentsDeleted(segments, events);
+        }
     }
 
     public void register() throws IOException {
