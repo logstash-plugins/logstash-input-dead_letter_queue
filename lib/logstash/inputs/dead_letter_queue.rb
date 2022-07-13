@@ -69,6 +69,8 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
     @cleaned_metrics = metric.namespace(@pipeline_id)
     @inner_plugin = org.logstash.input.DeadLetterQueueInputPlugin.new(dlq_path, @commit_offsets, sincedb_path, start_timestamp, clean_consumed,
             lambda do |segments, events|
+                # gauges is used instead of metric type because the updates that comes from the
+                # DLQ reader are already absolute values and not deltas.
                 @cleaned_metrics.gauge(:cleaned_segments, segments)
                 @cleaned_metrics.gauge(:cleaned_events, events)
             end)
