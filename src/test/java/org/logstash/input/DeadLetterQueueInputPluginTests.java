@@ -39,6 +39,12 @@ import static org.junit.Assert.*;
 public class DeadLetterQueueInputPluginTests {
 
     private Path dir;
+    private final DeadLetterQueueInputPlugin.UpdateConsumedMetrics metricsSink = new DeadLetterQueueInputPlugin.UpdateConsumedMetrics() {
+        @Override
+        public void segmentsDeleted(int segments, long events) {
+
+        }
+    };
 
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -58,7 +64,7 @@ public class DeadLetterQueueInputPluginTests {
         }
 
         Path since = temporaryFolder.newFile(".sincedb").toPath();
-        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, true, since, null, false);
+        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, true, since, null, false, metricsSink);
 
         final AtomicInteger count = new AtomicInteger();
         Thread pluginThread = new Thread(() -> {
@@ -85,7 +91,7 @@ public class DeadLetterQueueInputPluginTests {
         writeEntry(queueWriter, entry);
         writeEntry(queueWriter, entry);
 
-        DeadLetterQueueInputPlugin secondPlugin = new DeadLetterQueueInputPlugin(dir, true, since, null, false);
+        DeadLetterQueueInputPlugin secondPlugin = new DeadLetterQueueInputPlugin(dir, true, since, null, false, metricsSink);
 
         pluginThread = new Thread(() -> {
             try {
@@ -119,7 +125,7 @@ public class DeadLetterQueueInputPluginTests {
             }
         }
         Path since = temporaryFolder.newFile(".sincedb").toPath();
-        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, false, since, new Timestamp(targetDateString), false);
+        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, false, since, new Timestamp(targetDateString), false, metricsSink);
         plugin.register();
     }
 
@@ -127,7 +133,7 @@ public class DeadLetterQueueInputPluginTests {
     public void testClosingEmptyDlq() throws Exception {
         // Plugin does nothing and does not crash
         Path since = temporaryFolder.newFile(".sincedb").toPath();
-        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, true, since, null, false);
+        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, true, since, null, false, metricsSink);
 
         plugin.register();
         plugin.close();
@@ -141,7 +147,7 @@ public class DeadLetterQueueInputPluginTests {
         int times = 0;
         while (times++ < 1000) {
             try {
-                DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(queuePath, true, since, null, false);
+                DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(queuePath, true, since, null, false, metricsSink);
                 plugin.register();
                 plugin.run((entry) -> { assertNotNull(entry); });
             } catch (NoSuchFileException e) {

@@ -1,5 +1,6 @@
 ## 2.0.0
   - Introduce the boolean `clean_consumed` setting to enable the automatic removal of completely consumed segments. Requires Logstash 8.4.0 or above [#43](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/43)
+  - Exposes metrics about segments and events cleaned by this plugin [#45](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/45)
 
 ## 1.1.12
   - Fix: Replace use of block with lambda to fix wrong number of arguments error on jruby-9.3.4.0 [#42](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/42)

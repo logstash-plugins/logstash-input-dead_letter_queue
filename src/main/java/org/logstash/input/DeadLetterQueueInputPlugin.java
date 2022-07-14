@@ -24,6 +24,7 @@ import org.logstash.DLQEntry;
 import org.logstash.Timestamp;
 import org.logstash.ackedqueue.Queueable;
 import org.logstash.common.io.DeadLetterQueueReader;
+import org.logstash.common.io.SegmentListener;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,7 +36,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 
-public class DeadLetterQueueInputPlugin {
+public class DeadLetterQueueInputPlugin implements SegmentListener {
+
+    @FunctionalInterface
+    public interface UpdateConsumedMetrics {
+        void segmentsDeleted(int segments, long events);
+    }
+
     private static final Logger logger = LogManager.getLogger(DeadLetterQueueInputPlugin.class);
 
     private static final int MAX_FLUSH_READS = 100;
@@ -50,9 +57,10 @@ public class DeadLetterQueueInputPlugin {
 
     private volatile DeadLetterQueueReader queueReader;
     private SinceDB sinceDb;
+    private UpdateConsumedMetrics updater;
 
     public DeadLetterQueueInputPlugin(Path path, boolean commitOffsets, Path sinceDbPath, Timestamp targetTimestamp,
-                                      boolean cleanConsumed) throws IOException {
+                                      boolean cleanConsumed, UpdateConsumedMetrics updater) throws IOException {
         this.queuePath = path;
         this.commitOffsets = commitOffsets;
         this.cleanConsumed = cleanConsumed;
@@ -61,6 +69,7 @@ public class DeadLetterQueueInputPlugin {
         this.targetTimestamp = targetTimestamp;
         this.readerHasState = new AtomicBoolean(false);
         this.sinceDb = SinceDB.fromPath(sinceDbPath);
+        this.updater = updater;
     }
 
     private synchronized DeadLetterQueueReader lazyInitQueueReader() throws IOException {
@@ -78,7 +87,7 @@ public class DeadLetterQueueInputPlugin {
             if (cleanConsumed) {
                 // cleanConsumed is true only for Logstash >= 8.4.0 which provides this constructor,
                 // else fallback to the old constructor.
-                this.queueReader = new DeadLetterQueueReader(queuePath, cleanConsumed, this::persistSinceDB);
+                this.queueReader = new DeadLetterQueueReader(queuePath, cleanConsumed, this);
             } else {
                 this.queueReader = new DeadLetterQueueReader(queuePath);
             }
@@ -87,9 +96,17 @@ public class DeadLetterQueueInputPlugin {
         return queueReader;
     }
 
-    private void persistSinceDB() {
+    @Override
+    public void segmentCompleted() {
         sinceDb = SinceDB.getUpdated(sinceDb, queueReader);
         sinceDb.flush();
+    }
+
+    @Override
+    public void segmentsDeleted(int segments, long events) {
+        if (updater != null) {
+            updater.segmentsDeleted(segments, events);
+        }
     }
 
     public void register() throws IOException {
