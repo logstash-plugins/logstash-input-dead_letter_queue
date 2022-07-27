@@ -24,7 +24,7 @@ class LogStash::Inputs::DeadLetterQueue < LogStash::Inputs::Base
   # If true deletes the DLQ segments that has been processed.
   # Supported only Logstash >= 8.4.0
   # If this setting is `true` and Logstash version doesn't provides this feature then result in a configuration error.
-  # When set to `true` implicitly forces `commit_offsets` to `true`.
+  # This feature implicitly requires that the `commit_offsets` option is set to `true`. Iif it's not then you'll get a configuration error.
   config :clean_consumed, :validate => :boolean, :default => false
   # Path to the dead letter queue directory which was created by a Logstash instance.
   # This is the path from where "dead" events are read from and is typically configured 
