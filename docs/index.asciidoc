@@ -64,9 +64,9 @@ input plugins.
   * Value type is <<boolean,boolean>>
   * Default value is `false`
 
-Deletes the DLQ segments that has been read, when it's configured.
-This feature implicitly requires `commit_offsets` set to `true`, if it's not then result in a configuration error.
-It's supported only for Logstash >= 8.4.0. If this setting is `true` and Logstash version doesn't provides this feature then result in a configuration error.
+When set to `true`, this option deletes the DLQ segments that have been read.
+This feature requires that `commit_offsets` is set to `true`. If not, you'll get a configuration error.
+This feature is available in Logstash 8.4.0 and later. If this setting is `true` and and you are using a Logstash version older than 8.4.0, then you'll get a configuration error.
 
 [id="plugins-{type}s-{plugin}-commit_offsets"]
 ===== `commit_offsets` 
