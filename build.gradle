@@ -1,11 +1,12 @@
 import java.nio.file.Files
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
+plugins {
+  id 'java'
+  id 'idea'
+}
 
 group 'co.elastic.logstash.input'
-
-apply plugin: 'java'
-apply plugin: 'idea'
 
 version "${new File("VERSION").text.trim()}"
 
@@ -15,8 +16,10 @@ repositories {
     mavenCentral()
 }
 
-project.sourceCompatibility = 1.8
-project.targetCompatibility = 1.8
+java {
+  sourceCompatibility = JavaVersion.VERSION_1_8
+  targetCompatibility = JavaVersion.VERSION_1_8
+}
 
 String log4jVersion = '2.17.1'
 
