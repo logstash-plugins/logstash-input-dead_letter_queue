@@ -1,3 +1,6 @@
+## 2.0.1
+  - Fix NullPointerException when the plugin closes [#53](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/53)
+
 ## 2.0.0
   - Introduce the boolean `clean_consumed` setting to enable the automatic removal of completely consumed segments. Requires Logstash 8.4.0 or above [#43](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/43)
   - Exposes metrics about segments and events cleaned by this plugin [#45](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/45)
