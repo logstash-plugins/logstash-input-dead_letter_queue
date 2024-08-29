@@ -76,6 +76,22 @@ interface SinceDB {
         return new AssignedDB(oldSinceDb.getPath(), reader.getCurrentSegment(), reader.getCurrentPosition());
     }
 
+    /**
+     * Attempts to update the SinceDB. This operation may throw a NullPointerException
+     * if DeadLetterQueueReader.currentReader is null, which can occur if
+     * DeadLetterQueueReader.segments has never had an available segment.
+     * The exception is caught and ignored.
+     * @param oldSinceDb
+     * @param reader
+     * @return new instance of SinceDB or UnassignedDB
+     */
+    static SinceDB mayUpdate(SinceDB oldSinceDb, DeadLetterQueueReader reader) {
+        try {
+            return getUpdated(oldSinceDb, reader);
+        } catch (NullPointerException e) {
+            return new UnassignedDB(oldSinceDb.getPath());
+        }
+    }
 
     final class UnassignedDB implements SinceDB {
         private final Path sinceDbPath;
