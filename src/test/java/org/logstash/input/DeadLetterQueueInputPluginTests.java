@@ -145,6 +145,7 @@ public class DeadLetterQueueInputPluginTests {
         plugin.register();
         plugin.close();
     }
+
     @Test
     public void testClosingEmptyDlq() throws Exception {
         // Plugin does nothing and does not crash
