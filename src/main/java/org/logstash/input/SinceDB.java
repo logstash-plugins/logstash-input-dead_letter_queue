@@ -85,7 +85,7 @@ interface SinceDB {
      * @param reader
      * @return new instance of SinceDB or UnassignedDB
      */
-    static SinceDB mayUpdate(SinceDB oldSinceDb, DeadLetterQueueReader reader) {
+    static SinceDB tryUpdate(SinceDB oldSinceDb, DeadLetterQueueReader reader) {
         try {
             return getUpdated(oldSinceDb, reader);
         } catch (NullPointerException e) {
