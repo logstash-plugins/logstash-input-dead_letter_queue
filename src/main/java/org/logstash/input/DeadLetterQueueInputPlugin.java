@@ -156,7 +156,7 @@ public class DeadLetterQueueInputPlugin implements SegmentListener {
         final DeadLetterQueueReader queueReader = this.queueReader;
         if (queueReader != null && commitOffsets && readerHasState.get()) {
             logger.debug("retrieving current DLQ segment and position");
-            sinceDb = SinceDB.mayUpdate(sinceDb, queueReader);
+            sinceDb = SinceDB.tryUpdate(sinceDb, queueReader);
         }
 
         try {
