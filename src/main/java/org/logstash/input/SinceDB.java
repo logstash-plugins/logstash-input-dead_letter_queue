@@ -81,9 +81,10 @@ interface SinceDB {
      * if DeadLetterQueueReader.currentReader is null, which can occur if
      * DeadLetterQueueReader.segments has never had an available segment.
      * The exception is caught and ignored.
-     * @param oldSinceDb
-     * @param reader
-     * @return new instance of SinceDB or UnassignedDB
+     *
+     * @param oldSinceDb of SinceDB to update
+     * @param reader the reader that needs to be queried.
+     * @return new instance of SinceDB or UnassignedDB if the reader doesn't point to an existing segment.
      */
     static SinceDB tryUpdate(SinceDB oldSinceDb, DeadLetterQueueReader reader) {
         try {
