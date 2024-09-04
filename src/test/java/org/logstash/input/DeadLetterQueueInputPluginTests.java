@@ -28,6 +28,7 @@ import org.logstash.Timestamp;
 import org.logstash.common.io.DeadLetterQueueWriter;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -127,6 +128,22 @@ public class DeadLetterQueueInputPluginTests {
         Path since = temporaryFolder.newFile(".sincedb").toPath();
         DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, false, since, new Timestamp(targetDateString), false, metricsSink);
         plugin.register();
+    }
+
+    @Test
+    public void testEmptyDlqShouldNotThrowsNPEWhenClose() throws Exception {
+        // Create SinceDB file
+        Path garbageSegment = temporaryFolder.newFile("1.log").toPath();
+        Path sincePath = temporaryFolder.newFile(".sincedb").toPath();
+        SinceDB sinceDB = new SinceDB.AssignedDB(sincePath, garbageSegment, 0);
+        sinceDB.flush();
+        // Delete segment in DLQ folder
+        Files.delete(garbageSegment);
+
+        DeadLetterQueueInputPlugin plugin = new DeadLetterQueueInputPlugin(dir, true, sincePath, null, false, metricsSink);
+
+        plugin.register();
+        plugin.close();
     }
 
     @Test
