@@ -1,3 +1,4 @@
 *.gem
 Gemfile.lock
 .bundle
+lib/logstash-input-dead_letter_queue_jars.rb
