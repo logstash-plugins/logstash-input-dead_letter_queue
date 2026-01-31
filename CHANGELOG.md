@@ -1,3 +1,6 @@
+## 2.0.2
+  - Re-packaging the plugin [#57](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/57)
+
 ## 2.0.1
   - Fix NullPointerException when the plugin closes [#53](https://github.com/logstash-plugins/logstash-input-dead_letter_queue/pull/53)
 
