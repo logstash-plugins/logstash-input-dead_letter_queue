@@ -92,6 +92,10 @@ dependencies {
 
   testImplementation group: 'junit', name: 'junit', version: '4.12'
   testImplementation "org.apache.logging.log4j:log4j-core:${log4jVersion}"
-  testImplementation group: 'org.jruby', name: 'jruby-complete', version: "9.2.11.0"
+  // Use the JRuby that ships with the Logstash under test rather than pinning a
+  // jruby-complete version. This keeps the test JRuby matched to logstash-core
+  // (8.x -> JRuby 9.x, 9.4+ -> JRuby 10.x) so it does not break when Logstash
+  // bumps JRuby; a pinned 9.2.11.0 lacked JRuby 10 classes (org.jruby.api.Define).
+  testImplementation fileTree(dir: "${logstashCoreGemPath}/../vendor/jruby/lib", include: 'jruby.jar')
   testImplementation fileTree(dir: logstashCoreGemPath, include: '**/*.jar')
 }

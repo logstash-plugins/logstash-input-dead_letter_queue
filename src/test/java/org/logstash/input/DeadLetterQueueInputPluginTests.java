@@ -28,6 +28,8 @@ import org.logstash.Timestamp;
 import org.logstash.common.io.DeadLetterQueueWriter;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -55,11 +57,34 @@ public class DeadLetterQueueInputPluginTests {
         dir = temporaryFolder.newFolder().toPath();
     }
 
+    // DeadLetterQueueWriter.newBuilder gained a fifth argument (flushCheckInterval) in
+    // Logstash 9.x. Resolve and invoke the available overload reflectively so this test
+    // compiles and runs against both the 8.x (4-arg) and 9.x (5-arg) logstash-core.
+    private static DeadLetterQueueWriter newWriter(Path dir, long maxSegmentSize, long maxQueueSize,
+                                                   Duration flushInterval) throws Exception {
+        for (Method m : DeadLetterQueueWriter.class.getMethods()) {
+            if (!m.getName().equals("newBuilder") || !Modifier.isStatic(m.getModifiers())) {
+                continue;
+            }
+            final Object builder;
+            switch (m.getParameterCount()) {
+                case 4:
+                    builder = m.invoke(null, dir, maxSegmentSize, maxQueueSize, flushInterval);
+                    break;
+                case 5:
+                    builder = m.invoke(null, dir, maxSegmentSize, maxQueueSize, flushInterval, flushInterval);
+                    break;
+                default:
+                    continue;
+            }
+            return (DeadLetterQueueWriter) builder.getClass().getMethod("build").invoke(builder);
+        }
+        throw new IllegalStateException("No compatible DeadLetterQueueWriter.newBuilder overload found");
+    }
+
     @Test
     public void testHappyPath() throws Exception {
-        DeadLetterQueueWriter queueWriter = DeadLetterQueueWriter
-                .newBuilder(dir, 10_000_000, 10_000_000, Duration.ofMillis(100))
-                .build();
+        DeadLetterQueueWriter queueWriter = newWriter(dir, 10_000_000, 10_000_000, Duration.ofMillis(100));
         for (int i = 0; i < 10_000; i++) {
             writeEntry(queueWriter, new DLQEntry(new Event(), "test-type", "test-id", "test_" + i));
         }
@@ -103,7 +128,13 @@ public class DeadLetterQueueInputPluginTests {
             }
         });
         pluginThread.start();
-        Thread.sleep(1500); // flush interval 1s
+        // On Logstash 9.x the DLQ flush/read of the two resumed entries can take
+        // longer than the original fixed 1.5s window, so poll until both are read
+        // (or a generous deadline elapses) instead of sleeping a fixed interval.
+        long deadline = System.currentTimeMillis() + 15000;
+        while (count.get() < 10003 && System.currentTimeMillis() < deadline) {
+            Thread.sleep(100);
+        }
         pluginThread.interrupt();
         pluginThread.join();
         secondPlugin.close();
@@ -112,9 +143,7 @@ public class DeadLetterQueueInputPluginTests {
 
     @Test
     public void testTimestamp() throws Exception {
-        DeadLetterQueueWriter queueWriter = DeadLetterQueueWriter
-                .newBuilder(dir, 100_000, 10_000_000, Duration.ofMillis(1000))
-                .build();
+        DeadLetterQueueWriter queueWriter = newWriter(dir, 100_000, 10_000_000, Duration.ofMillis(1000));
         long epoch = 1490659200000L;
         String targetDateString = "";
         for (int i = 0; i < 10000; i++) {
