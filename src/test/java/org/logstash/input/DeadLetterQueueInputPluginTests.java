@@ -82,6 +82,17 @@ public class DeadLetterQueueInputPluginTests {
         throw new IllegalStateException("No compatible DeadLetterQueueWriter.newBuilder overload found");
     }
 
+    // Poll until the reader has emitted at least `target` events, or the timeout
+    // elapses. Logstash 9.x (especially 9.previous) flushes/reads the DLQ on a
+    // slower cadence than the original fixed sleeps assumed, which made those
+    // sleeps flaky; polling keeps the test fast when quick and tolerant when slow.
+    private static void awaitCount(AtomicInteger count, int target, long timeoutMs) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        while (count.get() < target && System.currentTimeMillis() < deadline) {
+            Thread.sleep(100);
+        }
+    }
+
     @Test
     public void testHappyPath() throws Exception {
         DeadLetterQueueWriter queueWriter = newWriter(dir, 10_000_000, 10_000_000, Duration.ofMillis(100));
@@ -105,10 +116,10 @@ public class DeadLetterQueueInputPluginTests {
 
         DLQEntry entry = new DLQEntry(new Event(), "test-type", "test-id", "test_shared");
 
-        Thread.sleep(15000);
+        awaitCount(count, 10000, 30000);
         assertEquals(10000, count.get());
         writeEntry(queueWriter, entry);
-        Thread.sleep(1500); // flush interval 1s
+        awaitCount(count, 10001, 15000);
         assertEquals(10001, count.get());
         pluginThread.interrupt();
         pluginThread.join();
@@ -128,13 +139,7 @@ public class DeadLetterQueueInputPluginTests {
             }
         });
         pluginThread.start();
-        // On Logstash 9.x the DLQ flush/read of the two resumed entries can take
-        // longer than the original fixed 1.5s window, so poll until both are read
-        // (or a generous deadline elapses) instead of sleeping a fixed interval.
-        long deadline = System.currentTimeMillis() + 15000;
-        while (count.get() < 10003 && System.currentTimeMillis() < deadline) {
-            Thread.sleep(100);
-        }
+        awaitCount(count, 10003, 15000);
         pluginThread.interrupt();
         pluginThread.join();
         secondPlugin.close();
