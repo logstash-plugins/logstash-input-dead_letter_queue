@@ -1,0 +1,35 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - {elastic_stack_version: 7.current, snapshot: false}
+          - {elastic_stack_version: 8.current, snapshot: false}
+          - {elastic_stack_version: 7.current, snapshot: true}
+          - {elastic_stack_version: 8.current, snapshot: true}
+    
+    name: Build with ${{ matrix.elastic_stack_version }} snapshot=${{ matrix.snapshot }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+          cache: 'maven'
+      
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+      
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+      
+      - name: Build with snapshot
+        run: ./gradlew clean build -Delastic.version=${{ matrix.elastic_stack_version }} -Pbuild.snapshot=${{ matrix.snapshot }}
